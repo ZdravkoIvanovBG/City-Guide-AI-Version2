@@ -5,5 +5,6 @@
  * City AI Guide API
  * OpenAPI spec version: 0.1.0
  */
+import type { TransportMode } from './transportMode';
 
-export type DestinationHowToGetThere = {[key: string]: string};
+export type DestinationHowToGetThere = {[key: string]: TransportMode};

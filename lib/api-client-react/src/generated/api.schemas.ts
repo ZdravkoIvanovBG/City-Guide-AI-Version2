@@ -125,7 +125,17 @@ export interface PlanSummary {
   photoUrl: string;
 }
 
-export type DestinationHowToGetThere = {[key: string]: string};
+export interface TransportMode {
+  available: boolean;
+  duration?: string;
+  from?: string;
+  line?: string;
+  stop?: string;
+  cost?: string;
+  instructions?: string;
+}
+
+export type DestinationHowToGetThere = {[key: string]: TransportMode};
 
 export interface Destination {
   name: string;

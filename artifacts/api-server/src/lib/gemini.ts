@@ -70,7 +70,15 @@ interface PlanData {
       summary: string;
       insiderTips: string[];
       entryCost: string;
-      howToGetThere: Record<string, string>;
+      howToGetThere: Record<string, {
+        available: boolean;
+        duration?: string;
+        from?: string;
+        line?: string;
+        stop?: string;
+        cost?: string;
+        instructions?: string;
+      }>;
       bestTimeToVisit: string;
       photoSearchQuery: string;
     }>;
@@ -150,7 +158,14 @@ Return ONLY valid JSON (no markdown, no preamble, no code blocks) matching this 
           "summary": "2-3 engaging sentences about this place",
           "insiderTips": ["tip1", "tip2", "tip3"],
           "entryCost": "Free OR €12 adults OR Pay-what-you-wish",
-          "howToGetThere": { "walking": "string", "subway": "string" },
+          "howToGetThere": {
+            "walking": { "available": true, "duration": "18 min", "from": "city centre", "instructions": "Head north along [street]. Flat route." },
+            "bus": { "available": true, "duration": "9 min", "from": "[Bus Station, Stop 4]", "line": "Bus 22 direction [terminus]", "stop": "Exit at [stop name]", "cost": "[local currency] single fare", "instructions": "Buses run every 8 minutes." },
+            "subway": { "available": false },
+            "tram": { "available": false },
+            "taxi": { "available": true, "duration": "7 min", "cost": "approx. [local cost]", "instructions": "Available via Uber, Bolt, or local taxis." },
+            "bicycle": { "available": false }
+          },
           "bestTimeToVisit": "string",
           "photoSearchQuery": "clean search string like 'Eiffel Tower Paris'"
         }
@@ -181,8 +196,17 @@ Rules:
 - Include 2-3 hotels per tier (budget/midRange/luxury)
 - Include 8-10 restaurants
 - Include 5-8 misc events/experiences
-- Only include transport modes that realistically exist in ${city}
 - photoSearchQuery should be specific enough to get a good Google Places photo
+- howToGetThere rules:
+  * Always include all six keys: walking, bus, subway, tram, taxi, bicycle
+  * Set available: false for modes that don't practically exist in ${city} (e.g. no subway in many smaller cities, no tram in most US cities)
+  * When available: false, include ONLY the "available" key — no other fields
+  * Duration is travel time from city centre or from the previous destination in the day
+  * Use real street names, station names, bus line numbers, and stop names for ${city} where you know them
+  * Cost must be in the local currency of ${city} (e.g. JPY for Tokyo, GBP for London, USD for New York)
+  * line field (bus/tram): include the line number/name and direction terminus
+  * stop field (bus/subway/tram): the stop or exit name where the traveller should alight
+  * instructions: 1-2 practical sentences — frequency, any useful tips, app names for rideshare
 - Return ONLY the JSON object, nothing else`;
 
   const raw = await callGemini(prompt);

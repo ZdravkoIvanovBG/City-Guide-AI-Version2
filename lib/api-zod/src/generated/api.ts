@@ -144,7 +144,15 @@ export const GetPlanResponse = zod.object({
   "summary": zod.string(),
   "insiderTips": zod.array(zod.string()),
   "entryCost": zod.string(),
-  "howToGetThere": zod.record(zod.string(), zod.string()).optional(),
+  "howToGetThere": zod.record(zod.string(), zod.object({
+  "available": zod.boolean(),
+  "duration": zod.string().optional(),
+  "from": zod.string().optional(),
+  "line": zod.string().optional(),
+  "stop": zod.string().optional(),
+  "cost": zod.string().optional(),
+  "instructions": zod.string().optional()
+})).optional(),
   "bestTimeToVisit": zod.string(),
   "photoUrl": zod.string()
 }))
@@ -241,7 +249,15 @@ export const RegeneratePlanResponse = zod.object({
   "summary": zod.string(),
   "insiderTips": zod.array(zod.string()),
   "entryCost": zod.string(),
-  "howToGetThere": zod.record(zod.string(), zod.string()).optional(),
+  "howToGetThere": zod.record(zod.string(), zod.object({
+  "available": zod.boolean(),
+  "duration": zod.string().optional(),
+  "from": zod.string().optional(),
+  "line": zod.string().optional(),
+  "stop": zod.string().optional(),
+  "cost": zod.string().optional(),
+  "instructions": zod.string().optional()
+})).optional(),
   "bestTimeToVisit": zod.string(),
   "photoUrl": zod.string()
 }))
@@ -330,7 +346,15 @@ export const GetPublicPlanResponse = zod.object({
   "summary": zod.string(),
   "insiderTips": zod.array(zod.string()),
   "entryCost": zod.string(),
-  "howToGetThere": zod.record(zod.string(), zod.string()).optional(),
+  "howToGetThere": zod.record(zod.string(), zod.object({
+  "available": zod.boolean(),
+  "duration": zod.string().optional(),
+  "from": zod.string().optional(),
+  "line": zod.string().optional(),
+  "stop": zod.string().optional(),
+  "cost": zod.string().optional(),
+  "instructions": zod.string().optional()
+})).optional(),
   "bestTimeToVisit": zod.string(),
   "photoUrl": zod.string()
 }))

@@ -1,0 +1,103 @@
+On the Generated Plan page, Itinerary tab, the destination cards
+currently show transport mode pills (Walking / Bus / etc.) with a
+generic instruction. Replace this with genuinely useful, specific
+transport information.
+
+## Update the Gemini prompt
+
+In the system prompt sent to Gemini, change the howToGetThere field
+structure for each destination from a simple string per mode to a
+richer object:
+
+"howToGetThere": {
+  "walking": {
+    "available": true,
+    "duration": "18 min",
+    "from": "city centre / previous destination",
+    "instructions": "Head north along [street name] and turn left
+                     at [landmark]. Flat route, no stairs."
+  },
+  "bus": {
+    "available": true,
+    "duration": "9 min",
+    "from": "Central Bus Station, Stop 4",
+    "line": "Bus 22 direction [terminus name]",
+    "stop": "Exit at [stop name]",
+    "cost": "€1.50 single, €4.00 day pass",
+    "instructions": "Buses run every 8 minutes on weekdays."
+  },
+  "subway": {
+    "available": true,
+    "duration": "6 min",
+    "from": "[Station name], Line 2 (Blue Line)",
+    "stop": "Exit at [destination station], Exit B",
+    "cost": "€1.80 single",
+    "instructions": "Trains run every 4 min during the day."
+  },
+  "tram": {
+    "available": false
+  },
+  "taxi": {
+    "available": true,
+    "duration": "7 min",
+    "cost": "approx. €8–12 depending on traffic",
+    "instructions": "Available via Uber, Bolt, or local taxis."
+  },
+  "bicycle": {
+    "available": true,
+    "duration": "11 min",
+    "instructions": "City bike rentals available nearby (€1/30 min).
+                     Bike lane runs the full route."
+  }
+}
+
+Rules for Gemini:
+- Only set available: true for transport modes that genuinely exist
+  and are practical in that specific city
+- Duration is the estimated time from the city centre or from the
+  previous destination in the day's itinerary
+- Cost must be in the local currency of the city
+- Line names, stop names, and street names should be real where
+  possible — Gemini knows these for major cities
+- If a mode is available: false, do not include any other fields
+
+## Update the destination card UI
+
+Transport section redesign:
+- Pills at the top for each available mode only — do not show pills
+  for modes where available: false
+- Each pill shows: mode icon + mode name + duration
+  e.g.  🚶 Walking · 18 min   |   🚌 Bus · 9 min   |   🚇 Metro · 6 min
+- Clicking a pill expands the detail panel below with a smooth
+  height animation (Framer Motion AnimatePresence)
+- Detail panel contents vary by mode:
+
+  Walking panel:
+    🕐 18 minutes  |  📍 From: city centre
+    [instructions text]
+
+  Bus panel:
+    🕐 9 min  |  📍 From: Central Bus Station, Stop 4
+    🚌 Bus 22 → [terminus]  |  🏁 Exit: [stop name]
+    💰 €1.50 single · €4.00 day pass
+    [instructions text]
+
+  Metro panel:
+    🕐 6 min  |  📍 From: [station], Line 2
+    🏁 Exit at [station], Exit B  |  💰 €1.80
+    [instructions text]
+
+  Taxi/Rideshare panel:
+    🕐 ~7 min  |  💰 approx. €8–12
+    [instructions text]
+
+  Bicycle panel:
+    🕐 11 min  |  💰 €1/30 min rental nearby
+    [instructions text]
+
+- Walking pill is selected by default when the card renders
+- On mobile: pills wrap to two rows if needed, detail panel is
+  full-width below
+- Color coding: Walking = green tint, Bus = blue tint, Metro =
+  purple tint, Taxi = amber tint, Bicycle = teal tint — applied
+  to the pill border and detail panel left border only, subtle

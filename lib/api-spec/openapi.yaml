@@ -683,10 +683,29 @@ components:
         howToGetThere:
           type: object
           additionalProperties:
-            type: string
+            $ref: "#/components/schemas/TransportMode"
         bestTimeToVisit:
           type: string
         photoUrl:
+          type: string
+
+    TransportMode:
+      type: object
+      required: [available]
+      properties:
+        available:
+          type: boolean
+        duration:
+          type: string
+        from:
+          type: string
+        line:
+          type: string
+        stop:
+          type: string
+        cost:
+          type: string
+        instructions:
           type: string
 
     HotelsByTier:

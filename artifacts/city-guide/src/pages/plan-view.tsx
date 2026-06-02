@@ -9,12 +9,191 @@ import {
   PlanDay,
   Destination,
   Hotel,
-  Restaurant
+  Restaurant,
+  TransportMode
 } from "@workspace/api-client-react";
 import { Navbar } from "@/components/layout/navbar";
-import { MapPin, Clock, Info, ExternalLink, Calendar, Map, Check, Share2, Download } from "lucide-react";
+import {
+  MapPin, Clock, Info, ExternalLink, Share2, Download,
+  Footprints, Bus, Train, TramFront, Car, Bike
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import type { LucideIcon } from "lucide-react";
+
+// ── Transport config ────────────────────────────────────────────────────────
+
+interface ModeConfig {
+  label: string;
+  Icon: LucideIcon;
+  pillDefault: string;
+  pillActive: string;
+  panelBorder: string;
+}
+
+const MODE_CONFIG: Record<string, ModeConfig> = {
+  walking: {
+    label: "Walking",
+    Icon: Footprints,
+    pillDefault: "border-green-400/25 text-green-400/60 hover:border-green-400/50 hover:text-green-400",
+    pillActive: "border-green-400 text-green-400 bg-green-950/40",
+    panelBorder: "border-l-green-400/70",
+  },
+  bus: {
+    label: "Bus",
+    Icon: Bus,
+    pillDefault: "border-blue-400/25 text-blue-400/60 hover:border-blue-400/50 hover:text-blue-400",
+    pillActive: "border-blue-400 text-blue-400 bg-blue-950/40",
+    panelBorder: "border-l-blue-400/70",
+  },
+  subway: {
+    label: "Metro",
+    Icon: Train,
+    pillDefault: "border-purple-400/25 text-purple-400/60 hover:border-purple-400/50 hover:text-purple-400",
+    pillActive: "border-purple-400 text-purple-400 bg-purple-950/40",
+    panelBorder: "border-l-purple-400/70",
+  },
+  tram: {
+    label: "Tram",
+    Icon: TramFront,
+    pillDefault: "border-indigo-400/25 text-indigo-400/60 hover:border-indigo-400/50 hover:text-indigo-400",
+    pillActive: "border-indigo-400 text-indigo-400 bg-indigo-950/40",
+    panelBorder: "border-l-indigo-400/70",
+  },
+  taxi: {
+    label: "Taxi",
+    Icon: Car,
+    pillDefault: "border-amber-400/25 text-amber-400/60 hover:border-amber-400/50 hover:text-amber-400",
+    pillActive: "border-amber-400 text-amber-400 bg-amber-950/40",
+    panelBorder: "border-l-amber-400/70",
+  },
+  bicycle: {
+    label: "Bicycle",
+    Icon: Bike,
+    pillDefault: "border-teal-400/25 text-teal-400/60 hover:border-teal-400/50 hover:text-teal-400",
+    pillActive: "border-teal-400 text-teal-400 bg-teal-950/40",
+    panelBorder: "border-l-teal-400/70",
+  },
+};
+
+const MODE_ORDER = ["walking", "bus", "subway", "tram", "taxi", "bicycle"];
+
+// Handles both legacy string format and new object format from DB
+function parseMode(raw: unknown): (TransportMode & { available: true }) | null {
+  if (!raw) return null;
+  if (typeof raw === "string") {
+    return { available: true, instructions: raw };
+  }
+  if (typeof raw === "object" && raw !== null) {
+    const obj = raw as Record<string, unknown>;
+    if (obj.available === false) return null;
+    return {
+      available: true,
+      duration: typeof obj.duration === "string" ? obj.duration : undefined,
+      from: typeof obj.from === "string" ? obj.from : undefined,
+      line: typeof obj.line === "string" ? obj.line : undefined,
+      stop: typeof obj.stop === "string" ? obj.stop : undefined,
+      cost: typeof obj.cost === "string" ? obj.cost : undefined,
+      instructions: typeof obj.instructions === "string" ? obj.instructions : undefined,
+    };
+  }
+  return null;
+}
+
+// ── Components ──────────────────────────────────────────────────────────────
+
+function TransportDetail({ info }: { info: TransportMode & { available: true } }) {
+  return (
+    <div className="space-y-1.5 text-[11px] text-muted-foreground leading-relaxed">
+      {(info.duration || info.from) && (
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+          {info.duration && (
+            <span className="flex items-center gap-1">
+              <Clock className="w-3 h-3 shrink-0" />
+              {info.duration}
+            </span>
+          )}
+          {info.from && (
+            <span className="flex items-center gap-1">
+              <MapPin className="w-3 h-3 shrink-0" />
+              From: {info.from}
+            </span>
+          )}
+        </div>
+      )}
+      {info.line && <div className="font-medium text-foreground/70">{info.line}</div>}
+      {info.stop && <div>Exit: {info.stop}</div>}
+      {info.cost && <div>💰 {info.cost}</div>}
+      {info.instructions && (
+        <div className="text-muted-foreground/60 italic">{info.instructions}</div>
+      )}
+    </div>
+  );
+}
+
+function TransportSection({ howToGetThere }: { howToGetThere: Destination["howToGetThere"] }) {
+  const raw = howToGetThere as unknown as Record<string, unknown> | undefined;
+
+  const available = MODE_ORDER.flatMap((mode) => {
+    if (!raw || !(mode in raw)) return [];
+    const info = parseMode(raw[mode]);
+    return info ? [{ mode, info }] : [];
+  });
+
+  const defaultMode = available.find((m) => m.mode === "walking")?.mode ?? available[0]?.mode ?? null;
+  const [selected, setSelected] = useState<string | null>(defaultMode);
+
+  if (available.length === 0) return null;
+
+  const selectedEntry = available.find((m) => m.mode === selected);
+
+  return (
+    <div>
+      {/* Mode pills */}
+      <div className="flex flex-wrap gap-1.5">
+        {available.map(({ mode, info }) => {
+          const cfg = MODE_CONFIG[mode];
+          if (!cfg) return null;
+          const { Icon, label, pillDefault, pillActive } = cfg;
+          const isActive = selected === mode;
+          return (
+            <button
+              key={mode}
+              onClick={() => setSelected(isActive ? null : mode)}
+              className={`flex items-center gap-1.5 px-2.5 py-1 text-[11px] border transition-all ${isActive ? pillActive : pillDefault}`}
+            >
+              <Icon className="w-3 h-3 shrink-0" />
+              <span className="font-medium">{label}</span>
+              {info.duration && (
+                <span className="opacity-60 font-normal">· {info.duration}</span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Expandable detail panel */}
+      <AnimatePresence mode="wait">
+        {selected && selectedEntry && MODE_CONFIG[selected] && (
+          <motion.div
+            key={selected}
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2, ease: "easeInOut" }}
+            className="overflow-hidden"
+          >
+            <div className={`border-l-2 pl-3 mt-2 py-1.5 ${MODE_CONFIG[selected]!.panelBorder}`}>
+              <TransportDetail info={selectedEntry.info} />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+// ── Page ────────────────────────────────────────────────────────────────────
 
 export default function PlanView() {
   const [, params] = useRoute("/plan/:id/view");
@@ -61,15 +240,11 @@ export default function PlanView() {
     <div className="min-h-screen bg-background flex flex-col relative">
       <Navbar />
       
-      {/* Hero Section */}
+      {/* Hero */}
       <section className="relative h-[60vh] min-h-[500px] flex items-end pb-16">
         <div className="absolute inset-0 z-0">
           {plan.photoUrl && (
-            <img 
-              src={plan.photoUrl} 
-              alt={plan.city}
-              className="w-full h-full object-cover"
-            />
+            <img src={plan.photoUrl} alt={plan.city} className="w-full h-full object-cover" />
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
         </div>
@@ -84,17 +259,10 @@ export default function PlanView() {
             <div className="flex items-center gap-4 mb-4 text-sm font-medium tracking-widest uppercase text-primary">
               <span>{plan.country}</span>
               <span className="w-1 h-1 rounded-full bg-primary" />
-              <span>{format(new Date(plan.startDate), "MMM d")} - {format(new Date(plan.endDate), "MMM d, yyyy")}</span>
+              <span>{format(new Date(plan.startDate), "MMM d")} – {format(new Date(plan.endDate), "MMM d, yyyy")}</span>
             </div>
-            
-            <h1 className="font-serif text-6xl md:text-8xl mb-6 text-white leading-none">
-              {plan.city}
-            </h1>
-            
-            <p className="text-lg md:text-xl text-gray-300 font-light max-w-2xl leading-relaxed">
-              {plan.tripSummary}
-            </p>
-            
+            <h1 className="font-serif text-6xl md:text-8xl mb-6 text-white leading-none">{plan.city}</h1>
+            <p className="text-lg md:text-xl text-gray-300 font-light max-w-2xl leading-relaxed">{plan.tripSummary}</p>
             <div className="flex gap-4 mt-8">
               <Button variant="outline" className="bg-background/20 backdrop-blur-md border-border/50 hover:bg-background/40 rounded-none">
                 <Share2 className="w-4 h-4 mr-2" /> Share Plan
@@ -107,23 +275,20 @@ export default function PlanView() {
         </div>
       </section>
 
-      {/* Main Content */}
+      {/* Content */}
       <main className="flex-1 relative z-10 container mx-auto px-6 py-12">
         <Tabs defaultValue="itinerary" className="w-full">
           <div className="sticky top-20 z-40 bg-background/90 backdrop-blur-md pt-4 pb-4 border-b border-border/50 mb-12">
             <TabsList className="bg-transparent h-auto p-0 flex gap-8 border-none justify-start overflow-x-auto">
-              <TabsTrigger value="itinerary" className="font-serif text-xl md:text-2xl data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none border-b-2 border-transparent data-[state=active]:border-primary rounded-none pb-2 px-0">
-                Itinerary
-              </TabsTrigger>
-              <TabsTrigger value="hotels" className="font-serif text-xl md:text-2xl data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none border-b-2 border-transparent data-[state=active]:border-primary rounded-none pb-2 px-0">
-                Hotels
-              </TabsTrigger>
-              <TabsTrigger value="restaurants" className="font-serif text-xl md:text-2xl data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none border-b-2 border-transparent data-[state=active]:border-primary rounded-none pb-2 px-0">
-                Dining
-              </TabsTrigger>
-              <TabsTrigger value="misc" className="font-serif text-xl md:text-2xl data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none border-b-2 border-transparent data-[state=active]:border-primary rounded-none pb-2 px-0">
-                Good to Know
-              </TabsTrigger>
+              {["itinerary", "hotels", "restaurants", "misc"].map((tab) => (
+                <TabsTrigger
+                  key={tab}
+                  value={tab}
+                  className="font-serif text-xl md:text-2xl data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none border-b-2 border-transparent data-[state=active]:border-primary rounded-none pb-2 px-0 capitalize"
+                >
+                  {tab === "misc" ? "Good to Know" : tab === "restaurants" ? "Dining" : tab.charAt(0).toUpperCase() + tab.slice(1)}
+                </TabsTrigger>
+              ))}
             </TabsList>
           </div>
 
@@ -142,7 +307,6 @@ export default function PlanView() {
           </TabsContent>
 
           <TabsContent value="misc" className="mt-0 outline-none">
-            {/* Misc content... */}
             <div className="max-w-3xl">
               <h3 className="font-serif text-3xl mb-8 text-primary">Practical Info</h3>
               <div className="space-y-8 border-l border-border pl-8 relative">
@@ -152,7 +316,9 @@ export default function PlanView() {
                     <h4 className="font-serif text-xl mb-1">{item.name}</h4>
                     <p className="text-sm text-primary mb-3">{item.dateOrFrequency} • {item.location}</p>
                     <p className="text-muted-foreground">{item.description}</p>
-                    {item.isFree && <span className="inline-block mt-2 text-xs font-medium text-secondary border border-secondary/30 bg-secondary/10 px-2 py-1">Free</span>}
+                    {item.isFree && (
+                      <span className="inline-block mt-2 text-xs font-medium text-secondary border border-secondary/30 bg-secondary/10 px-2 py-1">Free</span>
+                    )}
                   </div>
                 ))}
               </div>
@@ -164,18 +330,20 @@ export default function PlanView() {
   );
 }
 
+// ── Day section ─────────────────────────────────────────────────────────────
+
 function DaySection({ day }: { day: PlanDay }) {
   return (
     <div className="relative">
       <div className="absolute -left-4 -top-12 md:-left-12 md:-top-20 text-[120px] md:text-[200px] font-serif font-bold text-muted/20 select-none pointer-events-none leading-none z-0">
         {day.dayNumber}
       </div>
-      
       <div className="relative z-10 mb-12">
         <h3 className="font-serif text-4xl md:text-5xl text-primary mb-2">Day {day.dayNumber}</h3>
-        <p className="text-muted-foreground uppercase tracking-widest text-sm">{format(new Date(day.date), "EEEE, MMMM do")}</p>
+        <p className="text-muted-foreground uppercase tracking-widest text-sm">
+          {format(new Date(day.date), "EEEE, MMMM do")}
+        </p>
       </div>
-      
       <div className="space-y-8 relative z-10 pl-2 md:pl-8 border-l border-border/50">
         {day.destinations.map((dest, i) => (
           <DestinationCard key={i} dest={dest} />
@@ -185,22 +353,24 @@ function DaySection({ day }: { day: PlanDay }) {
   );
 }
 
+// ── Destination card ─────────────────────────────────────────────────────────
+
 function DestinationCard({ dest }: { dest: Destination }) {
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-50px" }}
       className="bg-card border border-border overflow-hidden relative group"
     >
       <div className="absolute -left-[5px] top-8 w-2 h-12 bg-primary rounded-r-sm" />
-      
+
       <div className="flex flex-col md:flex-row">
         {dest.photoUrl && (
-          <div className="md:w-2/5 h-64 md:h-auto overflow-hidden relative">
-            <img 
-              src={dest.photoUrl} 
-              alt={dest.name} 
+          <div className="md:w-2/5 h-64 md:h-auto overflow-hidden relative shrink-0">
+            <img
+              src={dest.photoUrl}
+              alt={dest.name}
               className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
               loading="lazy"
             />
@@ -211,52 +381,46 @@ function DestinationCard({ dest }: { dest: Destination }) {
             </div>
           </div>
         )}
-        
-        <div className="p-8 flex-1 flex flex-col justify-center">
-          <div className="flex items-start justify-between mb-4">
+
+        <div className="p-8 flex-1 flex flex-col gap-5">
+          {/* Title + cost */}
+          <div className="flex items-start justify-between gap-4">
             <h4 className="font-serif text-3xl text-foreground">{dest.name}</h4>
-            <span className={`text-xs font-medium px-2 py-1 whitespace-nowrap ${dest.entryCost.toLowerCase().includes('free') ? 'text-secondary border border-secondary/30 bg-secondary/10' : 'text-primary border border-primary/30 bg-primary/10'}`}>
+            <span className={`text-xs font-medium px-2 py-1 whitespace-nowrap shrink-0 ${dest.entryCost.toLowerCase().includes("free") ? "text-secondary border border-secondary/30 bg-secondary/10" : "text-primary border border-primary/30 bg-primary/10"}`}>
               {dest.entryCost}
             </span>
           </div>
-          
-          <p className="text-muted-foreground leading-relaxed mb-6">
-            {dest.summary}
-          </p>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-auto">
-            <div>
-              <div className="flex items-center gap-2 text-sm font-medium text-foreground mb-2">
-                <Clock className="w-4 h-4 text-primary" /> Best time
-              </div>
-              <p className="text-sm text-muted-foreground">{dest.bestTimeToVisit}</p>
-            </div>
-            
-            {dest.howToGetThere && Object.keys(dest.howToGetThere).length > 0 && (
-              <div>
-                <div className="flex items-center gap-2 text-sm font-medium text-foreground mb-2">
-                  <MapPin className="w-4 h-4 text-primary" /> Getting there
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {Object.entries(dest.howToGetThere).map(([mode, info]) => (
-                    <span key={mode} className="text-xs bg-muted text-muted-foreground px-2 py-1 rounded-sm" title={info}>
-                      {mode}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
+
+          {/* Summary */}
+          <p className="text-muted-foreground leading-relaxed">{dest.summary}</p>
+
+          {/* Best time */}
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Clock className="w-4 h-4 text-primary shrink-0" />
+            <span>{dest.bestTimeToVisit}</span>
           </div>
-          
+
+          {/* Transport */}
+          {dest.howToGetThere && Object.keys(dest.howToGetThere).length > 0 && (
+            <div>
+              <div className="flex items-center gap-2 text-sm font-medium text-foreground mb-2.5">
+                <MapPin className="w-4 h-4 text-primary shrink-0" />
+                Getting there
+              </div>
+              <TransportSection howToGetThere={dest.howToGetThere} />
+            </div>
+          )}
+
+          {/* Insider tips */}
           {dest.insiderTips && dest.insiderTips.length > 0 && (
-            <div className="mt-6 pt-6 border-t border-border/50">
+            <div className="pt-5 border-t border-border/50">
               <div className="flex items-center gap-2 text-sm font-medium text-primary mb-3">
                 <Info className="w-4 h-4" /> Insider Tips
               </div>
               <ul className="space-y-2">
                 {dest.insiderTips.map((tip, idx) => (
                   <li key={idx} className="text-sm text-muted-foreground flex items-start gap-2">
-                    <span className="text-primary mt-1">•</span> {tip}
+                    <span className="text-primary mt-1 shrink-0">•</span> {tip}
                   </li>
                 ))}
               </ul>
@@ -268,44 +432,35 @@ function DestinationCard({ dest }: { dest: Destination }) {
   );
 }
 
+// ── Hotels section ───────────────────────────────────────────────────────────
+
 function HotelsSection({ hotels }: { hotels: TravelPlan["hotels"] }) {
   const [activeTier, setActiveTier] = useState<"budget" | "midRange" | "luxury">("midRange");
-  
   const currentHotels = hotels[activeTier] || [];
-  
+
   return (
     <div>
       <div className="flex gap-4 mb-12 border-b border-border/50 pb-4 overflow-x-auto hide-scrollbar">
-        <button 
-          onClick={() => setActiveTier("budget")}
-          className={`font-medium uppercase tracking-widest text-sm pb-4 border-b-2 transition-colors whitespace-nowrap ${activeTier === "budget" ? "text-primary border-primary" : "text-muted-foreground border-transparent hover:text-foreground"}`}
-        >
-          Boutique & Budget
-        </button>
-        <button 
-          onClick={() => setActiveTier("midRange")}
-          className={`font-medium uppercase tracking-widest text-sm pb-4 border-b-2 transition-colors whitespace-nowrap ${activeTier === "midRange" ? "text-primary border-primary" : "text-muted-foreground border-transparent hover:text-foreground"}`}
-        >
-          Comfort & Style
-        </button>
-        <button 
-          onClick={() => setActiveTier("luxury")}
-          className={`font-medium uppercase tracking-widest text-sm pb-4 border-b-2 transition-colors whitespace-nowrap ${activeTier === "luxury" ? "text-primary border-primary" : "text-muted-foreground border-transparent hover:text-foreground"}`}
-        >
-          Luxury & Iconic
-        </button>
+        {(["budget", "midRange", "luxury"] as const).map((tier) => (
+          <button
+            key={tier}
+            onClick={() => setActiveTier(tier)}
+            className={`font-medium uppercase tracking-widest text-sm pb-4 border-b-2 transition-colors whitespace-nowrap ${activeTier === tier ? "text-primary border-primary" : "text-muted-foreground border-transparent hover:text-foreground"}`}
+          >
+            {tier === "budget" ? "Boutique & Budget" : tier === "midRange" ? "Comfort & Style" : "Luxury & Iconic"}
+          </button>
+        ))}
       </div>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {currentHotels.map((hotel, idx) => (
-          <motion.div 
+          <motion.div
             key={idx}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: idx * 0.1 }}
             className="group relative"
           >
-            {/* Mouse tracking tilt would go here, using simple hover for now */}
             <div className="bg-card border border-border p-6 h-full flex flex-col transition-transform duration-300 group-hover:-translate-y-2">
               <div className="flex justify-between items-start mb-4">
                 <div>
@@ -314,17 +469,15 @@ function HotelsSection({ hotels }: { hotels: TravelPlan["hotels"] }) {
                 </div>
                 <span className="font-mono font-medium text-primary bg-primary/10 px-2 py-1 text-sm">{hotel.priceRange}</span>
               </div>
-              
+
               {hotel.photoUrl && (
                 <div className="h-48 mb-6 overflow-hidden bg-muted">
                   <img src={hotel.photoUrl} alt={hotel.name} className="w-full h-full object-cover" loading="lazy" />
                 </div>
               )}
-              
-              <p className="text-muted-foreground text-sm mb-6 flex-1 leading-relaxed">
-                {hotel.description}
-              </p>
-              
+
+              <p className="text-muted-foreground text-sm mb-6 flex-1 leading-relaxed">{hotel.description}</p>
+
               <div className="flex flex-wrap gap-3 mt-auto pt-4 border-t border-border/50">
                 {hotel.bookingUrl && (
                   <a href={hotel.bookingUrl} target="_blank" rel="noopener noreferrer" className="text-xs font-medium uppercase tracking-widest flex items-center gap-1 hover:text-primary transition-colors">
@@ -345,11 +498,13 @@ function HotelsSection({ hotels }: { hotels: TravelPlan["hotels"] }) {
   );
 }
 
+// ── Restaurants section ──────────────────────────────────────────────────────
+
 function RestaurantsSection({ restaurants }: { restaurants: TravelPlan["restaurants"] }) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
       {restaurants.map((rest, idx) => (
-        <motion.div 
+        <motion.div
           key={idx}
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -366,15 +521,8 @@ function RestaurantsSection({ restaurants }: { restaurants: TravelPlan["restaura
               <h4 className="font-serif text-2xl">{rest.name}</h4>
               <span className="font-mono text-sm text-primary">{rest.priceRange}</span>
             </div>
-            
-            <p className="text-xs text-muted-foreground uppercase tracking-widest mb-4">
-              {rest.cuisine} • {rest.neighbourhood}
-            </p>
-            
-            <p className="text-sm text-muted-foreground mb-4 line-clamp-3">
-              {rest.description}
-            </p>
-            
+            <p className="text-xs text-muted-foreground uppercase tracking-widest mb-4">{rest.cuisine} • {rest.neighbourhood}</p>
+            <p className="text-sm text-muted-foreground mb-4 line-clamp-3">{rest.description}</p>
             <div className="mt-auto bg-muted/30 p-3 border-l-2 border-primary">
               <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-1">Must Try</p>
               <p className="text-sm text-foreground">{rest.mustTryDish}</p>

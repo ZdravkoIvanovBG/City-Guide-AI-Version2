@@ -27,6 +27,7 @@ export * from './planSummary';
 export * from './profileUpdate';
 export * from './registerInput';
 export * from './restaurant';
+export * from './transportMode';
 export * from './travelPlan';
 export * from './travelStats';
 export * from './userProfile';
