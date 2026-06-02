@@ -121,12 +121,10 @@ function Globe3D({ visitedCities }: Props) {
     globe: THREE.Group;
     frameId: number;
   } | null>(null);
-  const autoRotateRef = useRef(true);
+  const interactingRef = useRef(false);
   const rotationRef = useRef({ x: 0, y: 0 });
   const dragRef = useRef({ active: false, lastX: 0, lastY: 0 });
   const resumeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pinchRef = useRef<number | null>(null);
-  const [isInteracting, setIsInteracting] = useState(false);
   const [tooltip, setTooltip] = useState<{ city: string; country: string; x: number; y: number } | null>(null);
 
   const visitedCountryNames = new Set(visitedCities.map((c) => c.country));
@@ -240,7 +238,7 @@ function Globe3D({ visitedCities }: Props) {
     let frameId = 0;
     const animate = () => {
       frameId = requestAnimationFrame(animate);
-      if (autoRotateRef.current) {
+      if (!interactingRef.current) {
         globe.rotation.y += ROTATION_SPEED;
       }
       // Pulse glow pins
@@ -301,71 +299,10 @@ function Globe3D({ visitedCities }: Props) {
     };
   }, [init]);
 
-  // Wheel zoom: attach with passive:false so preventDefault() works.
-  // Only captures scroll when the user has clicked to enter interaction mode.
-  useEffect(() => {
-    const el = mountRef.current;
-    if (!el) return;
-    const handler = (e: WheelEvent) => {
-      if (!isInteracting) return;
-      e.preventDefault();
-      if (!sceneRef.current) return;
-      const cam = sceneRef.current.camera;
-      cam.position.z = Math.max(3.5, Math.min(10, cam.position.z + e.deltaY * 0.005));
-    };
-    el.addEventListener("wheel", handler, { passive: false });
-    return () => el.removeEventListener("wheel", handler);
-  }, [isInteracting]);
-
-  // Pinch-to-zoom for touch devices (tablets in landscape, etc.)
-  useEffect(() => {
-    const el = mountRef.current;
-    if (!el) return;
-    const onTouchStart = (e: TouchEvent) => {
-      if (e.touches.length === 2) {
-        const dx = e.touches[0].clientX - e.touches[1].clientX;
-        const dy = e.touches[0].clientY - e.touches[1].clientY;
-        pinchRef.current = Math.sqrt(dx * dx + dy * dy);
-      }
-    };
-    const onTouchMove = (e: TouchEvent) => {
-      if (e.touches.length !== 2 || pinchRef.current === null || !sceneRef.current) return;
-      e.preventDefault();
-      const dx = e.touches[0].clientX - e.touches[1].clientX;
-      const dy = e.touches[0].clientY - e.touches[1].clientY;
-      const newDist = Math.sqrt(dx * dx + dy * dy);
-      const delta = pinchRef.current - newDist;
-      const cam = sceneRef.current.camera;
-      cam.position.z = Math.max(3.5, Math.min(10, cam.position.z + delta * 0.02));
-      pinchRef.current = newDist;
-    };
-    const onTouchEnd = () => { pinchRef.current = null; };
-    el.addEventListener("touchstart", onTouchStart, { passive: true });
-    el.addEventListener("touchmove", onTouchMove, { passive: false });
-    el.addEventListener("touchend", onTouchEnd, { passive: true });
-    return () => {
-      el.removeEventListener("touchstart", onTouchStart);
-      el.removeEventListener("touchmove", onTouchMove);
-      el.removeEventListener("touchend", onTouchEnd);
-    };
-  }, []);
-
-  // Click outside → exit interaction mode
-  useEffect(() => {
-    if (!isInteracting) return;
-    const handler = (e: MouseEvent) => {
-      if (mountRef.current && !mountRef.current.contains(e.target as Node)) {
-        setIsInteracting(false);
-      }
-    };
-    document.addEventListener("click", handler);
-    return () => document.removeEventListener("click", handler);
-  }, [isInteracting]);
-
   // Drag to rotate
   const onPointerDown = (e: React.PointerEvent) => {
     dragRef.current = { active: true, lastX: e.clientX, lastY: e.clientY };
-    autoRotateRef.current = false;
+    interactingRef.current = true;
     if (resumeTimerRef.current) clearTimeout(resumeTimerRef.current);
   };
   const onPointerMove = (e: React.PointerEvent) => {
@@ -380,19 +317,19 @@ function Globe3D({ visitedCities }: Props) {
   };
   const onPointerUp = () => {
     dragRef.current.active = false;
-    resumeTimerRef.current = setTimeout(() => { autoRotateRef.current = true; }, 3000);
+    resumeTimerRef.current = setTimeout(() => { interactingRef.current = false; }, 3000);
   };
 
-  // Click on globe → enter interaction mode
-  const onClick = () => {
-    if (!isInteracting) setIsInteracting(true);
+  // Scroll to zoom
+  const onWheel = (e: React.WheelEvent) => {
+    if (!sceneRef.current) return;
+    e.preventDefault();
+    const cam = sceneRef.current.camera;
+    cam.position.z = Math.max(3.5, Math.min(10, cam.position.z + e.deltaY * 0.005));
   };
 
   return (
-    <div
-      className="relative w-full h-[420px] select-none transition-all duration-300"
-      style={isInteracting ? { boxShadow: "0 0 0 1px rgba(212,168,67,0.5), 0 0 24px rgba(212,168,67,0.08)" } : {}}
-    >
+    <div className="relative w-full h-[420px] select-none">
       <div
         ref={mountRef}
         className="w-full h-full"
@@ -400,8 +337,8 @@ function Globe3D({ visitedCities }: Props) {
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerLeave={onPointerUp}
-        onClick={onClick}
-        style={{ touchAction: "pan-y" }}
+        onWheel={onWheel}
+        style={{ touchAction: "none" }}
       />
       {tooltip && (
         <div
@@ -412,18 +349,8 @@ function Globe3D({ visitedCities }: Props) {
           <span className="text-muted-foreground text-xs ml-1">{tooltip.country}</span>
         </div>
       )}
-      {/* Hint bar */}
-      <div className="absolute bottom-0 left-0 right-0 flex items-center justify-center pb-3 pointer-events-none">
-        {isInteracting ? (
-          <div className="text-xs text-primary/60 font-mono animate-fade-in flex items-center gap-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-primary/60 inline-block animate-pulse" />
-            scroll to zoom · click outside to exit
-          </div>
-        ) : (
-          <div className="text-xs text-muted-foreground/35 font-mono">
-            drag to rotate · click to zoom
-          </div>
-        )}
+      <div className="absolute bottom-3 right-3 text-xs text-muted-foreground/40 font-mono select-none">
+        drag to rotate • scroll to zoom
       </div>
     </div>
   );
