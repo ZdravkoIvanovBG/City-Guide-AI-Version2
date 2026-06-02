@@ -3,8 +3,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/lib/auth";
-import { useGetProfile } from "@workspace/api-client-react";
-import { useEffect } from "react";
+import { useRefreshToken } from "@workspace/api-client-react";
+import { useEffect, useRef } from "react";
 import { CustomCursor } from "@/components/cursor";
 
 import Home from "@/pages/home";
@@ -17,29 +17,30 @@ import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient();
 
-// Auth wrapper to fetch profile on initial load
+// On initial load, attempt a silent token refresh using the httpOnly refresh cookie.
+// If it succeeds, we get a new access token + user; otherwise, user stays logged out.
 function AuthInit({ children }: { children: React.ReactNode }) {
   const { login, logout } = useAuth();
-  const { data: profile, isError } = useGetProfile({
-    query: {
-      retry: false,
-      refetchOnWindowFocus: false,
-    }
-  });
+  const attempted = useRef(false);
+  const { mutate: refresh } = useRefreshToken({});
 
   useEffect(() => {
-    // If we have profile data but no token in state, we might be relying on a cookie
-    // The instructions say JWT access token stored in memory. So if we refresh the page, 
-    // the memory token is gone. We rely on the refresh flow, but let's assume useGetProfile 
-    // succeeds if there's a valid session, or we need to handle token refresh logic here.
-    if (profile) {
-      // In a real app we'd get the token too, but here we just set user 
-      // if profile call succeeded (maybe via httpOnly cookie).
-      login(profile, "dummy-token-for-now-if-cookie-based");
-    } else if (isError) {
-      logout();
-    }
-  }, [profile, isError, login, logout]);
+    if (attempted.current) return;
+    attempted.current = true;
+
+    refresh(undefined, {
+      onSuccess: (data) => {
+        if (data.accessToken && data.user) {
+          login(data.user, data.accessToken);
+        } else {
+          logout();
+        }
+      },
+      onError: () => {
+        logout();
+      },
+    });
+  }, [login, logout, refresh]);
 
   return <>{children}</>;
 }
@@ -49,7 +50,7 @@ function Router() {
     <div className="min-h-[100dvh] flex flex-col w-full relative">
       <div className="bg-noise" />
       <CustomCursor />
-      
+
       <main className="flex-1 w-full flex flex-col relative z-10">
         <Switch>
           <Route path="/" component={Home} />
