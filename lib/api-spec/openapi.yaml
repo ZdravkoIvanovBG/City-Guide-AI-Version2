@@ -288,6 +288,53 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /weather:
+    get:
+      operationId: getWeather
+      tags: [plans]
+      summary: Get weather forecast for a city and date range
+      parameters:
+        - name: city
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: country
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: countryCode
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: startDate
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: endDate
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Weather forecast
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DayWeather"
+        "500":
+          description: Weather unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /plans/featured:
     get:
       operationId: getFeaturedCities
@@ -610,7 +657,7 @@ components:
 
     TravelPlan:
       type: object
-      required: [id, shareCode, city, country, startDate, endDate, travellerType, tripSummary, days, hotels, restaurants, misc, createdAt, photoUrl]
+      required: [id, shareCode, city, country, countryCode, startDate, endDate, travellerType, tripSummary, days, hotels, restaurants, misc, createdAt, photoUrl]
       properties:
         id:
           type: integer
@@ -619,6 +666,8 @@ components:
         city:
           type: string
         country:
+          type: string
+        countryCode:
           type: string
         startDate:
           type: string
@@ -688,6 +737,29 @@ components:
           type: string
         photoUrl:
           type: string
+
+    DayWeather:
+      type: object
+      required: [date, tempMin, tempMax, condition, icon, humidity, chanceOfRain, windSpeed]
+      properties:
+        date:
+          type: string
+        tempMin:
+          type: integer
+        tempMax:
+          type: integer
+        condition:
+          type: string
+        icon:
+          type: string
+        humidity:
+          type: integer
+        chanceOfRain:
+          type: integer
+        windSpeed:
+          type: integer
+        isHistorical:
+          type: boolean
 
     TransportMode:
       type: object

@@ -127,6 +127,7 @@ export const GetPlanResponse = zod.object({
   "shareCode": zod.string(),
   "city": zod.string(),
   "country": zod.string(),
+  "countryCode": zod.string(),
   "startDate": zod.string(),
   "endDate": zod.string(),
   "travellerType": zod.string(),
@@ -232,6 +233,7 @@ export const RegeneratePlanResponse = zod.object({
   "shareCode": zod.string(),
   "city": zod.string(),
   "country": zod.string(),
+  "countryCode": zod.string(),
   "startDate": zod.string(),
   "endDate": zod.string(),
   "travellerType": zod.string(),
@@ -329,6 +331,7 @@ export const GetPublicPlanResponse = zod.object({
   "shareCode": zod.string(),
   "city": zod.string(),
   "country": zod.string(),
+  "countryCode": zod.string(),
   "startDate": zod.string(),
   "endDate": zod.string(),
   "travellerType": zod.string(),
@@ -412,6 +415,31 @@ export const GetPublicPlanResponse = zod.object({
   "isFree": zod.boolean()
 }))
 })
+
+
+/**
+ * @summary Get weather forecast for a city and date range
+ */
+export const GetWeatherQueryParams = zod.object({
+  "city": zod.coerce.string(),
+  "country": zod.coerce.string(),
+  "countryCode": zod.coerce.string(),
+  "startDate": zod.coerce.string(),
+  "endDate": zod.coerce.string()
+})
+
+export const GetWeatherResponseItem = zod.object({
+  "date": zod.string(),
+  "tempMin": zod.number(),
+  "tempMax": zod.number(),
+  "condition": zod.string(),
+  "icon": zod.string(),
+  "humidity": zod.number(),
+  "chanceOfRain": zod.number(),
+  "windSpeed": zod.number(),
+  "isHistorical": zod.boolean().optional()
+})
+export const GetWeatherResponse = zod.array(GetWeatherResponseItem)
 
 
 /**

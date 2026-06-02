@@ -288,6 +288,7 @@ function formatPlan(plan: typeof plansTable.$inferSelect) {
     shareCode: plan.shareCode,
     city: plan.city,
     country: plan.country,
+    countryCode: (plan.planData as Record<string, unknown>)?.countryCode as string ?? "",
     startDate: plan.startDate,
     endDate: plan.endDate,
     travellerType: plan.travellerType,

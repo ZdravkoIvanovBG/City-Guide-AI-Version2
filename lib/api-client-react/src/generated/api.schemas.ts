@@ -202,6 +202,7 @@ export interface TravelPlan {
   shareCode: string;
   city: string;
   country: string;
+  countryCode: string;
   startDate: string;
   endDate: string;
   travellerType: string;
@@ -218,8 +219,28 @@ export interface TravelPlan {
   misc: MiscEvent[];
 }
 
+export interface DayWeather {
+  date: string;
+  tempMin: number;
+  tempMax: number;
+  condition: string;
+  icon: string;
+  humidity: number;
+  chanceOfRain: number;
+  windSpeed: number;
+  isHistorical?: boolean;
+}
+
 export type GetCityAutocompleteParams = {
 q: string;
+};
+
+export type GetWeatherParams = {
+city: string;
+country: string;
+countryCode: string;
+startDate: string;
+endDate: string;
 };
 
 export type GetCityPhotoParams = {

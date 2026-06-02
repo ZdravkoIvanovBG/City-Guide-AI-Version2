@@ -15,6 +15,7 @@ export interface TravelPlan {
   shareCode: string;
   city: string;
   country: string;
+  countryCode: string;
   startDate: string;
   endDate: string;
   travellerType: string;

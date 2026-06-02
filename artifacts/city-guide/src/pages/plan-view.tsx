@@ -5,20 +5,21 @@ import { format } from "date-fns";
 import { 
   useGetPlan, 
   getGetPlanQueryKey,
+  useGetWeather,
   TravelPlan,
   PlanDay,
   Destination,
-  Hotel,
-  Restaurant,
+  DayWeather,
   TransportMode
 } from "@workspace/api-client-react";
 import { Navbar } from "@/components/layout/navbar";
 import {
   MapPin, Clock, Info, ExternalLink, Share2, Download,
-  Footprints, Bus, Train, TramFront, Car, Bike
+  Footprints, Bus, Train, TramFront, Car, Bike, InfoIcon
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { LucideIcon } from "lucide-react";
 
 // ── Transport config ────────────────────────────────────────────────────────
@@ -193,6 +194,61 @@ function TransportSection({ howToGetThere }: { howToGetThere: Destination["howTo
   );
 }
 
+// ── Weather strip ─────────────────────────────────────────────────────────
+
+function WeatherStrip({ day, weatherByDate }: { day: PlanDay; weatherByDate: Map<string, DayWeather> }) {
+  const w = weatherByDate.get(day.date);
+  if (!w) return null;
+
+  const useFahrenheit = false; // already converted server-side based on countryCode
+  const unitLabel = useFahrenheit ? "°F" : "°C";
+  const iconUrl = `https://openweathermap.org/img/wn/${w.icon}@2x.png`;
+
+  return (
+    <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 px-4 py-2 bg-white/[0.03] border border-white/[0.06] text-[11px] text-muted-foreground mt-3 mb-1">
+      {/* Icon + condition */}
+      <span className="flex items-center gap-1 font-medium text-foreground/70">
+        <img src={iconUrl} alt={w.condition} className="w-5 h-5 -ml-1" />
+        <span className="capitalize">{w.condition}</span>
+      </span>
+
+      {/* Temp range */}
+      <span className="flex items-center gap-1">
+        <span className="text-blue-400/80">{w.tempMin}{unitLabel}</span>
+        <span className="text-muted-foreground/30">–</span>
+        <span className="text-amber-400/80">{w.tempMax}{unitLabel}</span>
+      </span>
+
+      {/* Rain */}
+      <span className="flex items-center gap-1">
+        💧 <span>{w.chanceOfRain}% rain</span>
+      </span>
+
+      {/* Wind */}
+      <span className="flex items-center gap-1">
+        💨 <span>{w.windSpeed} km/h</span>
+      </span>
+
+      {/* Historical badge */}
+      {w.isHistorical && (
+        <TooltipProvider delayDuration={200}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="flex items-center gap-1 text-muted-foreground/50 cursor-default">
+                <InfoIcon className="w-3 h-3" />
+                <span className="italic">Typical</span>
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="max-w-[240px] text-xs">
+              Forecast not available yet — showing typical weather for this season.
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      )}
+    </div>
+  );
+}
+
 // ── Page ────────────────────────────────────────────────────────────────────
 
 export default function PlanView() {
@@ -205,6 +261,27 @@ export default function PlanView() {
       queryKey: getGetPlanQueryKey(id)
     }
   });
+
+  // Fetch weather in parallel — never blocks plan from rendering
+  const weatherParams = {
+    city: plan?.city ?? "",
+    country: plan?.country ?? "",
+    countryCode: plan?.countryCode ?? "US",
+    startDate: plan?.startDate ?? "",
+    endDate: plan?.endDate ?? "",
+  };
+  const { data: weatherData } = useGetWeather(weatherParams, {
+    query: {
+      enabled: !!plan,
+      retry: false,
+      staleTime: 3 * 60 * 60 * 1000,
+      queryKey: ["/api/weather", weatherParams] as const,
+    },
+  });
+
+  const weatherByDate = new Map<string, DayWeather>(
+    (weatherData ?? []).map((d) => [d.date, d])
+  );
 
   if (isLoading) {
     return (
@@ -294,7 +371,7 @@ export default function PlanView() {
 
           <TabsContent value="itinerary" className="space-y-24 mt-0 outline-none">
             {plan.days.map((day, idx) => (
-              <DaySection key={idx} day={day} />
+              <DaySection key={idx} day={day} weatherByDate={weatherByDate} />
             ))}
           </TabsContent>
 
@@ -332,17 +409,18 @@ export default function PlanView() {
 
 // ── Day section ─────────────────────────────────────────────────────────────
 
-function DaySection({ day }: { day: PlanDay }) {
+function DaySection({ day, weatherByDate }: { day: PlanDay; weatherByDate: Map<string, DayWeather> }) {
   return (
     <div className="relative">
       <div className="absolute -left-4 -top-12 md:-left-12 md:-top-20 text-[120px] md:text-[200px] font-serif font-bold text-muted/20 select-none pointer-events-none leading-none z-0">
         {day.dayNumber}
       </div>
-      <div className="relative z-10 mb-12">
+      <div className="relative z-10 mb-8">
         <h3 className="font-serif text-4xl md:text-5xl text-primary mb-2">Day {day.dayNumber}</h3>
         <p className="text-muted-foreground uppercase tracking-widest text-sm">
           {format(new Date(day.date), "EEEE, MMMM do")}
         </p>
+        <WeatherStrip day={day} weatherByDate={weatherByDate} />
       </div>
       <div className="space-y-8 relative z-10 pl-2 md:pl-8 border-l border-border/50">
         {day.destinations.map((dest, i) => (
