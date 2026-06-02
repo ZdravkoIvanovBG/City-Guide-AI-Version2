@@ -1,0 +1,72 @@
+Add a weather forecast block to each day header in the Itinerary tab
+of the Generated Plan page.
+
+## API setup
+
+Use the OpenWeatherMap API. Sign up free at openweathermap.org,
+get an API key, add it to .env as OPENWEATHERMAP_API_KEY.
+The free tier (One Call API 3.0 or 5-day forecast endpoint) is
+enough for this feature.
+
+Endpoint to use:
+https://api.openweathermap.org/data/2.5/forecast?q={city}&appid={key}&units=metric
+
+This returns 5-day forecast in 3-hour intervals. Group the results
+by date to get one forecast object per day.
+
+## Backend
+
+Create a new backend route:
+  GET /api/weather?city={city}&country={country}&startDate={date}
+
+- Fetch the forecast from OpenWeatherMap
+- Group 3-hour slots by day, pick the midday (12:00) slot as
+  representative for each day
+- Return an array of daily forecast objects:
+  {
+    "date": "2025-06-03",
+    "tempMin": 18,
+    "tempMax": 26,
+    "condition": "Partly cloudy",
+    "icon": "02d",
+    "humidity": 62,
+    "chanceOfRain": 15,
+    "windSpeed": 12
+  }
+- Cache the result in the database for 3 hours (store fetch timestamp
+  alongside the data) — weather doesn't need to be re-fetched on
+  every page open
+- If the trip dates are more than 5 days in the future (outside
+  forecast range), return a fallback using historical averages:
+  ask Gemini "What is the typical weather in {city} in {month}?
+  Return JSON: { avgTempMin, avgTempMax, condition, notes }"
+  and label it clearly as "Typical weather for this time of year"
+
+## Frontend — day header weather block
+
+Each day section in the itinerary currently has a header like:
+"Day 1 — Monday, June 3"
+
+Directly below this header, add a horizontal weather strip:
+
+[ 🌤 Partly cloudy ]  [ 18° – 26°C ]  [ 💧 15% rain ]  [ 💨 12 km/h ]
+
+Design rules:
+- Compact single row, does not dominate the page
+- Weather icon: use the OpenWeatherMap icon URL:
+  https://openweathermap.org/img/wn/{icon}@2x.png
+- Temperature in Celsius (or Fahrenheit — detect from countryCode,
+  US/UK get Fahrenheit, everything else Celsius)
+- If it's a historical average fallback, show a small info icon
+  with tooltip: "Forecast not available yet — showing typical
+  weather for this season"
+- Subtle background: semi-transparent card behind the weather row,
+  slightly different shade from the day header
+- On mobile: wrap to two rows if needed
+
+## Loading behavior
+
+Fetch weather in parallel with the plan generation — do not block
+the plan from rendering while weather loads. If weather fetch fails
+silently, just don't show the weather strip for that day. Never show
+an error state for this — it's supplementary info.
