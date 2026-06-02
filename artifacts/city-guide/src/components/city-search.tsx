@@ -36,7 +36,7 @@ export function CitySearch() {
 
   const handleSelect = (city: CityOption) => {
     setIsOpen(false);
-    setLocation(`/plan/${encodeURIComponent(city.city)}?country=${encodeURIComponent(city.countryCode)}`);
+    setLocation(`/plan/${encodeURIComponent(city.city)}?country=${encodeURIComponent(city.country)}&countryCode=${encodeURIComponent(city.countryCode)}`);
   };
 
   return (

@@ -93,7 +93,7 @@ router.post("/plans", optionalAuth, async (req: AuthRequest, res): Promise<void>
     return;
   }
 
-  const { city, country, startDate, endDate, budget, preferences, travellerType } = parsed.data;
+  const { city, country, countryCode, startDate, endDate, budget, preferences, travellerType } = parsed.data;
 
   try {
     const [planData, cityPhotoUrl] = await Promise.all([
@@ -140,6 +140,7 @@ router.post("/plans", optionalAuth, async (req: AuthRequest, res): Promise<void>
 
     const enrichedPlanData = {
       ...planData,
+      countryCode,
       days: daysWithPhotos,
       hotels: {
         budget: budgetHotels,

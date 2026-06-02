@@ -1,0 +1,69 @@
+The weather feature was implemented but is not showing anywhere on
+the plan page. Debug and fix it end to end.
+
+## Step 1 — Find the bug, don't assume it
+
+Before changing anything, add console.log statements at every step
+of the weather flow and report back what you find:
+
+1. In the backend route GET /api/weather — log when the route is
+   hit, what params it received, what OpenWeatherMap returned, and
+   what the final response looks like
+2. In the frontend — log when the weather fetch is called, what
+   URL it's calling, what response comes back, and where the data
+   ends up in state
+3. Check the browser Network tab: is the /api/weather request being
+   made at all? If yes, what status code does it return?
+
+Report the findings before making any fix.
+
+## Step 2 — Common issues to check
+
+Check each of these specifically:
+
+- Is OPENWEATHERMAP_API_KEY present in .env and actually being read
+  by the backend? Log process.env.OPENWEATHERMAP_API_KEY at server
+  startup — if it prints undefined the env var is missing or named
+  differently than the code expects
+
+- Is the weather fetch being called at the right time? It must fire
+  after the plan is loaded and the city + dates are available — not
+  before. Log the city and startDate values at the moment the fetch
+  is triggered
+
+- Is the weather data being stored in component state and actually
+  passed down to the day header components? Trace the data from
+  the API response all the way to where the day headers render
+
+- Is the WeatherStrip component (or whatever it's called) actually
+  being rendered inside the day header? Search the itinerary
+  component for where day headers render and confirm the weather
+  component is included there — it may have been built but never
+  actually placed in the JSX
+
+- Is it rendering but invisible? Check if it's hidden behind
+  a conditional like {weather && <WeatherStrip />} where weather
+  is always null or undefined at render time
+
+- Is the OpenWeatherMap endpoint correct? The free tier uses:
+  https://api.openweathermap.org/data/2.5/forecast
+  NOT the One Call 3.0 endpoint which requires a paid subscription.
+  If the code is calling one-call/3.0 it will return 401 and
+  silently fail
+
+## Step 3 — Fix whatever is broken
+
+Once the root cause is identified, fix only that specific thing.
+Do not refactor the whole weather implementation — just fix the
+broken part.
+
+## Step 4 — Verify it works
+
+After the fix, confirm:
+- The weather strip is visible below each day header
+- It shows the correct city's weather
+- The icon, temperature range, rain chance, and wind speed all
+  display
+- If the trip is beyond the 5-day forecast window, the fallback
+  text "Typical weather for this season" appears instead
+- No console errors related to weather remain

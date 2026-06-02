@@ -4,9 +4,9 @@ import { getWeatherForecast } from "../lib/weather";
 const router: IRouter = Router();
 
 router.get("/weather", async (req, res): Promise<void> => {
-  const { city, country, countryCode, startDate, endDate } = req.query as Record<string, string>;
-  if (!city || !country || !countryCode || !startDate || !endDate) {
-    res.status(400).json({ error: "Missing required query params: city, country, countryCode, startDate, endDate" });
+  const { city, country, countryCode = "", startDate, endDate } = req.query as Record<string, string>;
+  if (!city || !country || !startDate || !endDate) {
+    res.status(400).json({ error: "Missing required query params: city, country, startDate, endDate" });
     return;
   }
 

@@ -46,6 +46,7 @@ export default function PlanBuilder() {
   const city = decodeURIComponent(params?.city || "");
   const searchParams = new URLSearchParams(window.location.search);
   const country = searchParams.get("country") || "";
+  const countryCode = searchParams.get("countryCode") || "";
 
   const { data: cityPhoto } = useGetCityPhoto(
     { q: `${city} ${country} city landmark high quality` },
@@ -88,6 +89,7 @@ export default function PlanBuilder() {
         data: {
           city,
           country,
+          countryCode,
           startDate: format(values.dateRange.from, "yyyy-MM-dd"),
           endDate: format(values.dateRange.to, "yyyy-MM-dd"),
           budget: values.budget,

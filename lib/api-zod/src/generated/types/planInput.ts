@@ -9,6 +9,8 @@
 export interface PlanInput {
   city: string;
   country: string;
+  /** ISO 3166-1 alpha-2 country code (e.g. FR, JP, US) */
+  countryCode: string;
   /** ISO date string (YYYY-MM-DD) */
   startDate: string;
   /** ISO date string (YYYY-MM-DD) */

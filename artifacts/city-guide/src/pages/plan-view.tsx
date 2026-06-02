@@ -266,7 +266,7 @@ export default function PlanView() {
   const weatherParams = {
     city: plan?.city ?? "",
     country: plan?.country ?? "",
-    countryCode: plan?.countryCode ?? "US",
+    countryCode: plan?.countryCode || "US",
     startDate: plan?.startDate ?? "",
     endDate: plan?.endDate ?? "",
   };

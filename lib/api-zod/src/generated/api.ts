@@ -107,6 +107,7 @@ export const GetPlansResponse = zod.array(GetPlansResponseItem)
 export const GeneratePlanBody = zod.object({
   "city": zod.string(),
   "country": zod.string(),
+  "countryCode": zod.string().describe('ISO 3166-1 alpha-2 country code (e.g. FR, JP, US)'),
   "startDate": zod.string().describe('ISO date string (YYYY-MM-DD)'),
   "endDate": zod.string().describe('ISO date string (YYYY-MM-DD)'),
   "budget": zod.string().nullish().describe('No preference | Budget traveller | Mid-range | Luxury'),
