@@ -29,15 +29,15 @@ export function CustomCursor() {
     };
 
     const onHoverEnter = (e: MouseEvent) => {
-      const target = e.target as Element;
-      if (target.closest(HOVER_SELECTORS)) {
+      const target = e.target;
+      if (target instanceof Element && target.closest(HOVER_SELECTORS)) {
         root.classList.add("cursor--hover");
       }
     };
 
     const onHoverLeave = (e: MouseEvent) => {
-      const target = e.target as Element;
-      if (target.closest(HOVER_SELECTORS)) {
+      const target = e.target;
+      if (target instanceof Element && target.closest(HOVER_SELECTORS)) {
         root.classList.remove("cursor--hover");
       }
     };
