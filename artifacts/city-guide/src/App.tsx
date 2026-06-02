@@ -14,6 +14,7 @@ import Login from "@/pages/login";
 import Register from "@/pages/register";
 import Profile from "@/pages/profile";
 import NotFound from "@/pages/not-found";
+import { PricingPage, TermsPage, PrivacyPage, ConductPage } from "@/pages/placeholder";
 
 const queryClient = new QueryClient();
 
@@ -60,6 +61,10 @@ function Router() {
           <Route path="/plan/:city" component={PlanBuilder} />
           <Route path="/plan/:id/view" component={PlanView} />
           <Route path="/plan/share/:shareCode" component={PlanView} />
+          <Route path="/pricing" component={PricingPage} />
+          <Route path="/terms" component={TermsPage} />
+          <Route path="/privacy" component={PrivacyPage} />
+          <Route path="/conduct" component={ConductPage} />
           <Route component={NotFound} />
         </Switch>
       </main>

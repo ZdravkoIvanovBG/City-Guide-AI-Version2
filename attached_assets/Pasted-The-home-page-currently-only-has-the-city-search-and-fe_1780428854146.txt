@@ -1,0 +1,93 @@
+The home page currently only has the city search and featured cities.
+Expand it with the following sections and a footer.
+
+## Section 1 — "How it works" (below featured cities)
+
+Three steps in a horizontal layout (stack vertically on mobile):
+1. Choose your city
+2. Set your dates and preferences  
+3. Get your AI-generated plan
+
+Each step: a large outlined number (1 / 2 / 3) in Cormorant Garamond,
+a short title, and a one-line description. Subtle connecting line
+between the three steps on desktop.
+
+## Section 2 — Plans & Pricing
+
+Two plan cards side by side (stack on mobile):
+
+### Free plan card
+- Label: "Explorer"
+- Features list:
+  - 3 AI plans per month
+  - Up to 4 days per plan
+  - Itinerary + Restaurants tabs
+  - Save plans to profile
+- CTA button: "Get started free" → goes to register page
+
+### Pro plan card (highlighted, amber border glow)
+- Label: "Voyager" + "Pro" badge
+- Features list:
+  - Unlimited AI plans
+  - Up to 7 days per plan
+  - All tabs (Itinerary, Hotels, Restaurants, Misc)
+  - 3D world map on profile
+  - Export to PDF
+  - Share plan via public link
+  - Priority generation
+- CTA button: "Upgrade to Pro" → goes to a /pricing page
+  (the pricing page can be a placeholder for now with "Coming soon")
+- Add a subtle animated shimmer/glow effect on the Pro card border
+
+Note: do NOT enforce these limits in the backend yet — just display
+the plans visually. The actual gating logic comes later.
+
+## Section 3 — Testimonials / Inspiration quotes
+
+Three cards with fake-but-realistic traveller quotes, e.g.:
+- "Planned my entire Tokyo trip in 30 seconds. The insider tips were
+   spot on." — Marco, Italy
+- "Finally visited cities I'd never have discovered on my own."
+   — Priya, UK
+- "The restaurant picks alone were worth it." — James, Canada
+
+Each card: quote text, name, country flag emoji, subtle avatar
+placeholder (initials in a circle). Soft card background, no harsh
+borders.
+
+## Footer
+
+Full-width dark footer (#05080a background) with four columns:
+
+Column 1 — Branding
+- App name in Cormorant Garamond
+- One-line tagline
+- Social media icons (Instagram, X/Twitter, TikTok) — link to # for now
+  Use simple SVG icons, no icon library needed
+
+Column 2 — Product
+- Home
+- How it works
+- Pricing
+- Generate a plan
+
+Column 3 — Legal & Info
+- Terms of Service → /terms (placeholder page)
+- Privacy Policy → /privacy (placeholder page)
+- Community Guidelines → /conduct (placeholder page)
+- Contact us → mailto: placeholder
+
+Column 4 — Account
+- Sign up
+- Log in
+- Profile
+- My plans
+
+Bottom bar below the columns:
+- "© 2025 [App Name]. All rights reserved."
+- Left aligned on desktop, centered on mobile
+
+All footer links use React Router <Link>. Placeholder pages (/terms,
+/privacy, /conduct) just need a minimal styled page with a heading
+and "This page is coming soon." text — same dark aesthetic, no lorem
+ipsum.
