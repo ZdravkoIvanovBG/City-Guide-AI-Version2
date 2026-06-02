@@ -210,7 +210,58 @@ export const GetPlanResponse = zod.object({
   "description": zod.string(),
   "location": zod.string(),
   "isFree": zod.boolean()
+})),
+  "packingList": zod.object({
+  "categories": zod.array(zod.object({
+  "name": zod.string(),
+  "items": zod.array(zod.object({
+  "label": zod.string(),
+  "essential": zod.boolean(),
+  "note": zod.string().nullish()
 }))
+}))
+}).optional(),
+  "budgetEstimate": zod.object({
+  "currency": zod.string(),
+  "currencySymbol": zod.string(),
+  "budgetTier": zod.string(),
+  "dailyBreakdown": zod.array(zod.object({
+  "day": zod.number(),
+  "date": zod.string(),
+  "items": zod.array(zod.object({
+  "category": zod.string(),
+  "description": zod.string(),
+  "estimatedCost": zod.number(),
+  "notes": zod.string().nullish()
+})),
+  "dayTotal": zod.number()
+})),
+  "fixedCosts": zod.array(zod.object({
+  "category": zod.string(),
+  "description": zod.string(),
+  "estimatedCostPerNight": zod.number(),
+  "totalEstimated": zod.number(),
+  "notes": zod.string().nullish()
+})),
+  "tripTotal": zod.object({
+  "low": zod.number(),
+  "mid": zod.number(),
+  "high": zod.number()
+}),
+  "localTips": zod.array(zod.string())
+}).optional(),
+  "tripChecklist": zod.object({
+  "categories": zod.array(zod.object({
+  "name": zod.string(),
+  "items": zod.array(zod.object({
+  "label": zod.string(),
+  "essential": zod.boolean(),
+  "link": zod.string().nullish(),
+  "linkLabel": zod.string().nullish(),
+  "detail": zod.string().nullish()
+}))
+}))
+}).optional()
 })
 
 
@@ -316,7 +367,58 @@ export const RegeneratePlanResponse = zod.object({
   "description": zod.string(),
   "location": zod.string(),
   "isFree": zod.boolean()
+})),
+  "packingList": zod.object({
+  "categories": zod.array(zod.object({
+  "name": zod.string(),
+  "items": zod.array(zod.object({
+  "label": zod.string(),
+  "essential": zod.boolean(),
+  "note": zod.string().nullish()
 }))
+}))
+}).optional(),
+  "budgetEstimate": zod.object({
+  "currency": zod.string(),
+  "currencySymbol": zod.string(),
+  "budgetTier": zod.string(),
+  "dailyBreakdown": zod.array(zod.object({
+  "day": zod.number(),
+  "date": zod.string(),
+  "items": zod.array(zod.object({
+  "category": zod.string(),
+  "description": zod.string(),
+  "estimatedCost": zod.number(),
+  "notes": zod.string().nullish()
+})),
+  "dayTotal": zod.number()
+})),
+  "fixedCosts": zod.array(zod.object({
+  "category": zod.string(),
+  "description": zod.string(),
+  "estimatedCostPerNight": zod.number(),
+  "totalEstimated": zod.number(),
+  "notes": zod.string().nullish()
+})),
+  "tripTotal": zod.object({
+  "low": zod.number(),
+  "mid": zod.number(),
+  "high": zod.number()
+}),
+  "localTips": zod.array(zod.string())
+}).optional(),
+  "tripChecklist": zod.object({
+  "categories": zod.array(zod.object({
+  "name": zod.string(),
+  "items": zod.array(zod.object({
+  "label": zod.string(),
+  "essential": zod.boolean(),
+  "link": zod.string().nullish(),
+  "linkLabel": zod.string().nullish(),
+  "detail": zod.string().nullish()
+}))
+}))
+}).optional()
 })
 
 
@@ -414,7 +516,58 @@ export const GetPublicPlanResponse = zod.object({
   "description": zod.string(),
   "location": zod.string(),
   "isFree": zod.boolean()
+})),
+  "packingList": zod.object({
+  "categories": zod.array(zod.object({
+  "name": zod.string(),
+  "items": zod.array(zod.object({
+  "label": zod.string(),
+  "essential": zod.boolean(),
+  "note": zod.string().nullish()
 }))
+}))
+}).optional(),
+  "budgetEstimate": zod.object({
+  "currency": zod.string(),
+  "currencySymbol": zod.string(),
+  "budgetTier": zod.string(),
+  "dailyBreakdown": zod.array(zod.object({
+  "day": zod.number(),
+  "date": zod.string(),
+  "items": zod.array(zod.object({
+  "category": zod.string(),
+  "description": zod.string(),
+  "estimatedCost": zod.number(),
+  "notes": zod.string().nullish()
+})),
+  "dayTotal": zod.number()
+})),
+  "fixedCosts": zod.array(zod.object({
+  "category": zod.string(),
+  "description": zod.string(),
+  "estimatedCostPerNight": zod.number(),
+  "totalEstimated": zod.number(),
+  "notes": zod.string().nullish()
+})),
+  "tripTotal": zod.object({
+  "low": zod.number(),
+  "mid": zod.number(),
+  "high": zod.number()
+}),
+  "localTips": zod.array(zod.string())
+}).optional(),
+  "tripChecklist": zod.object({
+  "categories": zod.array(zod.object({
+  "name": zod.string(),
+  "items": zod.array(zod.object({
+  "label": zod.string(),
+  "essential": zod.boolean(),
+  "link": zod.string().nullish(),
+  "linkLabel": zod.string().nullish(),
+  "detail": zod.string().nullish()
+}))
+}))
+}).optional()
 })
 
 

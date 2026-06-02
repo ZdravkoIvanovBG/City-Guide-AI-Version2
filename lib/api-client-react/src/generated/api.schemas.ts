@@ -199,6 +199,82 @@ export interface MiscEvent {
   isFree: boolean;
 }
 
+export interface PackingItem {
+  label: string;
+  essential: boolean;
+  /** @nullable */
+  note?: string | null;
+}
+
+export interface PackingCategory {
+  name: string;
+  items: PackingItem[];
+}
+
+export interface PackingList {
+  categories: PackingCategory[];
+}
+
+export interface BudgetLine {
+  category: string;
+  description: string;
+  estimatedCost: number;
+  /** @nullable */
+  notes?: string | null;
+}
+
+export interface BudgetDay {
+  day: number;
+  date: string;
+  items: BudgetLine[];
+  dayTotal: number;
+}
+
+export interface FixedCost {
+  category: string;
+  description: string;
+  estimatedCostPerNight: number;
+  totalEstimated: number;
+  /** @nullable */
+  notes?: string | null;
+}
+
+export interface TripTotal {
+  low: number;
+  mid: number;
+  high: number;
+}
+
+export interface BudgetEstimate {
+  currency: string;
+  currencySymbol: string;
+  budgetTier: string;
+  dailyBreakdown: BudgetDay[];
+  fixedCosts: FixedCost[];
+  tripTotal: TripTotal;
+  localTips: string[];
+}
+
+export interface ChecklistItem {
+  label: string;
+  essential: boolean;
+  /** @nullable */
+  link?: string | null;
+  /** @nullable */
+  linkLabel?: string | null;
+  /** @nullable */
+  detail?: string | null;
+}
+
+export interface ChecklistCategory {
+  name: string;
+  items: ChecklistItem[];
+}
+
+export interface TripChecklist {
+  categories: ChecklistCategory[];
+}
+
 export interface TravelPlan {
   id: number;
   shareCode: string;
@@ -219,6 +295,9 @@ export interface TravelPlan {
   hotels: HotelsByTier;
   restaurants: Restaurant[];
   misc: MiscEvent[];
+  packingList?: PackingList;
+  budgetEstimate?: BudgetEstimate;
+  tripChecklist?: TripChecklist;
 }
 
 export interface DayWeather {

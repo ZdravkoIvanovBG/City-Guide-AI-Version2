@@ -61,6 +61,9 @@ interface PlanData {
   lat: number;
   lng: number;
   tripSummary: string;
+  packingList: PackingListRaw;
+  budgetEstimate: BudgetEstimateRaw;
+  tripChecklist: TripChecklistRaw;
   days: Array<{
     dayNumber: number;
     date: string;
@@ -115,6 +118,70 @@ interface MiscRaw {
   description: string;
   location: string;
   isFree: boolean;
+}
+
+interface PackingItemRaw {
+  label: string;
+  essential: boolean;
+  note: string | null;
+}
+
+interface PackingCategoryRaw {
+  name: string;
+  items: PackingItemRaw[];
+}
+
+interface PackingListRaw {
+  categories: PackingCategoryRaw[];
+}
+
+interface BudgetLineRaw {
+  category: string;
+  description: string;
+  estimatedCost: number;
+  notes: string | null;
+}
+
+interface BudgetDayRaw {
+  day: number;
+  date: string;
+  items: BudgetLineRaw[];
+  dayTotal: number;
+}
+
+interface FixedCostRaw {
+  category: string;
+  description: string;
+  estimatedCostPerNight: number;
+  totalEstimated: number;
+  notes: string | null;
+}
+
+interface BudgetEstimateRaw {
+  currency: string;
+  currencySymbol: string;
+  budgetTier: string;
+  dailyBreakdown: BudgetDayRaw[];
+  fixedCosts: FixedCostRaw[];
+  tripTotal: { low: number; mid: number; high: number };
+  localTips: string[];
+}
+
+interface ChecklistItemRaw {
+  label: string;
+  essential: boolean;
+  link: string | null;
+  linkLabel: string | null;
+  detail: string | null;
+}
+
+interface ChecklistCategoryRaw {
+  name: string;
+  items: ChecklistItemRaw[];
+}
+
+interface TripChecklistRaw {
+  categories: ChecklistCategoryRaw[];
 }
 
 export async function generateTravelPlan(params: {
@@ -188,7 +255,63 @@ Return ONLY valid JSON (no markdown, no preamble, no code blocks) matching this 
   ],
   "misc": [
     { "name": "string", "dateOrFrequency": "string", "description": "string", "location": "string", "isFree": true }
-  ]
+  ],
+  "packingList": {
+    "categories": [
+      {
+        "name": "Documents",
+        "items": [
+          { "label": "Passport", "essential": true, "note": "Must be valid 6+ months beyond return date" },
+          { "label": "Travel insurance documents", "essential": true, "note": null }
+        ]
+      },
+      { "name": "Clothing", "items": [ { "label": "string", "essential": false, "note": null } ] },
+      { "name": "Toiletries", "items": [ { "label": "string", "essential": false, "note": null } ] },
+      { "name": "Electronics", "items": [ { "label": "string", "essential": false, "note": null } ] },
+      { "name": "Health & Safety", "items": [ { "label": "string", "essential": false, "note": null } ] },
+      { "name": "City-specific", "items": [ { "label": "string", "essential": false, "note": "Why this item matters in ${city}" } ] }
+    ]
+  },
+  "budgetEstimate": {
+    "currency": "local currency name",
+    "currencySymbol": "local currency symbol",
+    "budgetTier": "${budget ?? "mid-range"}",
+    "dailyBreakdown": [
+      {
+        "day": 1,
+        "date": "${startDate}",
+        "items": [
+          { "category": "Entry fees", "description": "string", "estimatedCost": 0, "notes": null },
+          { "category": "Transport", "description": "string", "estimatedCost": 0, "notes": null },
+          { "category": "Lunch", "description": "string", "estimatedCost": 0, "notes": null },
+          { "category": "Dinner", "description": "string", "estimatedCost": 0, "notes": null },
+          { "category": "Snacks & drinks", "description": "string", "estimatedCost": 0, "notes": null }
+        ],
+        "dayTotal": 0
+      }
+    ],
+    "fixedCosts": [
+      { "category": "Accommodation", "description": "string", "estimatedCostPerNight": 0, "totalEstimated": 0, "notes": null }
+    ],
+    "tripTotal": { "low": 0, "mid": 0, "high": 0 },
+    "localTips": ["string"]
+  },
+  "tripChecklist": {
+    "categories": [
+      {
+        "name": "Before you book",
+        "items": [
+          { "label": "Check visa requirements for ${country}", "essential": true, "link": "https://www.iatatravelcentre.com", "linkLabel": "Check requirements", "detail": "Specific visa rules for ${country}" },
+          { "label": "Check passport expiry", "essential": true, "link": null, "linkLabel": null, "detail": "Must be valid 6+ months beyond return date" }
+        ]
+      },
+      { "name": "Accommodation & flights", "items": [ { "label": "string", "essential": false, "link": null, "linkLabel": null, "detail": null } ] },
+      { "name": "Health & safety", "items": [ { "label": "string", "essential": false, "link": null, "linkLabel": null, "detail": "Emergency numbers, tap water, vaccinations relevant to ${country}" } ] },
+      { "name": "Money & payments", "items": [ { "label": "string", "essential": false, "link": null, "linkLabel": null, "detail": "Card acceptance, cash needs, ATM availability, tipping culture in ${city}" } ] },
+      { "name": "Useful apps for ${city}", "items": [ { "label": "string", "essential": false, "link": null, "linkLabel": null, "detail": "Real apps locals use in ${city} for transit, taxis, food" } ] },
+      { "name": "On arrival", "items": [ { "label": "string", "essential": false, "link": null, "linkLabel": null, "detail": null } ] }
+    ]
+  }
 }
 
 Rules:

@@ -702,6 +702,12 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/MiscEvent"
+        packingList:
+          $ref: "#/components/schemas/PackingList"
+        budgetEstimate:
+          $ref: "#/components/schemas/BudgetEstimate"
+        tripChecklist:
+          $ref: "#/components/schemas/TripChecklist"
 
     PlanDay:
       type: object
@@ -858,3 +864,148 @@ components:
           type: string
         isFree:
           type: boolean
+
+    PackingItem:
+      type: object
+      required: [label, essential]
+      properties:
+        label:
+          type: string
+        essential:
+          type: boolean
+        note:
+          type: ["string", "null"]
+
+    PackingCategory:
+      type: object
+      required: [name, items]
+      properties:
+        name:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PackingItem"
+
+    PackingList:
+      type: object
+      required: [categories]
+      properties:
+        categories:
+          type: array
+          items:
+            $ref: "#/components/schemas/PackingCategory"
+
+    BudgetLine:
+      type: object
+      required: [category, description, estimatedCost]
+      properties:
+        category:
+          type: string
+        description:
+          type: string
+        estimatedCost:
+          type: number
+        notes:
+          type: ["string", "null"]
+
+    BudgetDay:
+      type: object
+      required: [day, date, items, dayTotal]
+      properties:
+        day:
+          type: integer
+        date:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/BudgetLine"
+        dayTotal:
+          type: number
+
+    FixedCost:
+      type: object
+      required: [category, description, estimatedCostPerNight, totalEstimated]
+      properties:
+        category:
+          type: string
+        description:
+          type: string
+        estimatedCostPerNight:
+          type: number
+        totalEstimated:
+          type: number
+        notes:
+          type: ["string", "null"]
+
+    TripTotal:
+      type: object
+      required: [low, mid, high]
+      properties:
+        low:
+          type: number
+        mid:
+          type: number
+        high:
+          type: number
+
+    BudgetEstimate:
+      type: object
+      required: [currency, currencySymbol, budgetTier, dailyBreakdown, fixedCosts, tripTotal, localTips]
+      properties:
+        currency:
+          type: string
+        currencySymbol:
+          type: string
+        budgetTier:
+          type: string
+        dailyBreakdown:
+          type: array
+          items:
+            $ref: "#/components/schemas/BudgetDay"
+        fixedCosts:
+          type: array
+          items:
+            $ref: "#/components/schemas/FixedCost"
+        tripTotal:
+          $ref: "#/components/schemas/TripTotal"
+        localTips:
+          type: array
+          items:
+            type: string
+
+    ChecklistItem:
+      type: object
+      required: [label, essential]
+      properties:
+        label:
+          type: string
+        essential:
+          type: boolean
+        link:
+          type: ["string", "null"]
+        linkLabel:
+          type: ["string", "null"]
+        detail:
+          type: ["string", "null"]
+
+    ChecklistCategory:
+      type: object
+      required: [name, items]
+      properties:
+        name:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChecklistItem"
+
+    TripChecklist:
+      type: object
+      required: [categories]
+      properties:
+        categories:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChecklistCategory"

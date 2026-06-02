@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useRoute } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
@@ -10,12 +10,23 @@ import {
   PlanDay,
   Destination,
   DayWeather,
-  TransportMode
+  TransportMode,
+  PackingList,
+  PackingCategory,
+  PackingItem,
+  BudgetEstimate,
+  BudgetDay,
+  BudgetLine,
+  FixedCost,
+  TripChecklist,
+  ChecklistCategory,
+  ChecklistItem,
 } from "@workspace/api-client-react";
 import { Navbar } from "@/components/layout/navbar";
 import {
   MapPin, Clock, Info, ExternalLink, Share2, Download,
-  Footprints, Bus, Train, TramFront, Car, Bike, InfoIcon
+  Footprints, Bus, Train, TramFront, Car, Bike, InfoIcon,
+  ChevronDown, Package, Wallet, ClipboardList,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -357,13 +368,13 @@ export default function PlanView() {
         <Tabs defaultValue="itinerary" className="w-full">
           <div className="sticky top-20 z-40 bg-background/90 backdrop-blur-md pt-4 pb-4 border-b border-border/50 mb-12">
             <TabsList className="bg-transparent h-auto p-0 flex gap-8 border-none justify-start overflow-x-auto">
-              {["itinerary", "hotels", "restaurants", "misc"].map((tab) => (
+              {["itinerary", "hotels", "restaurants", "misc", "before-you-go"].map((tab) => (
                 <TabsTrigger
                   key={tab}
                   value={tab}
                   className="font-serif text-xl md:text-2xl data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none border-b-2 border-transparent data-[state=active]:border-primary rounded-none pb-2 px-0 capitalize"
                 >
-                  {tab === "misc" ? "Bonus Activities" : tab === "restaurants" ? "Dining" : tab.charAt(0).toUpperCase() + tab.slice(1)}
+                  {tab === "misc" ? "Bonus Activities" : tab === "restaurants" ? "Dining" : tab === "before-you-go" ? "Before You Go" : tab.charAt(0).toUpperCase() + tab.slice(1)}
                 </TabsTrigger>
               ))}
             </TabsList>
@@ -401,8 +412,543 @@ export default function PlanView() {
               </div>
             </div>
           </TabsContent>
+
+          <TabsContent value="before-you-go" className="mt-0 outline-none">
+            <BeforeYouGoTab plan={plan} />
+          </TabsContent>
         </Tabs>
       </main>
+    </div>
+  );
+}
+
+// ── Before You Go ────────────────────────────────────────────────────────────
+
+function useLocalStorage<T>(key: string, initial: T): [T, (v: T | ((p: T) => T)) => void] {
+  const [state, setState] = useState<T>(() => {
+    try { const s = localStorage.getItem(key); return s ? (JSON.parse(s) as T) : initial; }
+    catch { return initial; }
+  });
+  const set = useCallback((v: T | ((p: T) => T)) => {
+    setState(prev => {
+      const next = typeof v === "function" ? (v as (p: T) => T)(prev) : v;
+      try { localStorage.setItem(key, JSON.stringify(next)); } catch {}
+      return next;
+    });
+  }, [key]);
+  return [state, set];
+}
+
+function CollapsibleSection({ title, icon: Icon, children, storageKey }: {
+  title: string; icon: LucideIcon; children: React.ReactNode; storageKey: string;
+}) {
+  const [collapsed, setCollapsed] = useLocalStorage(storageKey, false);
+  return (
+    <div className="border border-border/60 rounded-sm">
+      <button
+        onClick={() => setCollapsed(c => !c)}
+        className="w-full flex items-center justify-between p-5 text-left hover:bg-muted/20 transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          <Icon className="w-5 h-5 text-primary shrink-0" />
+          <span className="font-serif text-2xl">{title}</span>
+        </div>
+        <motion.div animate={{ rotate: collapsed ? -90 : 0 }} transition={{ duration: 0.2 }}>
+          <ChevronDown className="w-5 h-5 text-muted-foreground" />
+        </motion.div>
+      </button>
+      <AnimatePresence initial={false}>
+        {!collapsed && (
+          <motion.div
+            key="content"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.25, ease: "easeInOut" }}
+            className="overflow-hidden"
+          >
+            <div className="px-5 pb-6">{children}</div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+// Packing list ----------------------------------------------------------------
+
+function PackingCategoryGroup({ category, checkedSet, onToggle }: {
+  category: PackingCategory; checkedSet: Set<string>; onToggle: (label: string) => void;
+}) {
+  const [open, setOpen] = useState(true);
+  return (
+    <div>
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="flex items-center gap-2 w-full text-left mb-1 group"
+      >
+        <motion.div animate={{ rotate: open ? 0 : -90 }} transition={{ duration: 0.18 }}>
+          <ChevronDown className="w-3.5 h-3.5 text-muted-foreground/70" />
+        </motion.div>
+        <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground group-hover:text-foreground transition-colors">
+          {category.name}
+        </span>
+      </button>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
+          >
+            <div className="space-y-0 pl-5 mb-4">
+              {category.items.map((item: PackingItem, i: number) => {
+                const isChecked = checkedSet.has(item.label);
+                return (
+                  <label
+                    key={i}
+                    className={`flex items-start gap-3 py-2.5 min-h-[44px] cursor-pointer border-b border-border/30 last:border-0 ${isChecked ? "opacity-40" : ""}`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={() => onToggle(item.label)}
+                      className="mt-0.5 h-4 w-4 shrink-0 accent-primary cursor-pointer"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className={`text-sm ${isChecked ? "line-through text-muted-foreground" : ""}`}>{item.label}</span>
+                        {item.essential && <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0" title="Essential" />}
+                      </div>
+                      {item.note && <p className="text-xs text-muted-foreground/60 mt-0.5">{item.note}</p>}
+                    </div>
+                  </label>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function PackingListSection({ planId, packingList }: { planId: number; packingList: PackingList }) {
+  const [checked, setChecked] = useLocalStorage<string[]>(`packing-checked-${planId}`, []);
+  const checkedSet = new Set(checked);
+  const allItems = packingList.categories.flatMap(c => c.items);
+  const total = allItems.length;
+  const doneCount = allItems.filter(item => checkedSet.has(item.label)).length;
+  const progress = total > 0 ? (doneCount / total) * 100 : 0;
+
+  const toggleItem = (label: string) => {
+    setChecked(prev => {
+      const s = new Set(prev);
+      if (s.has(label)) s.delete(label); else s.add(label);
+      return Array.from(s);
+    });
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <span className="text-sm text-muted-foreground">{doneCount} of {total} items packed</span>
+        <button onClick={() => setChecked([])} className="text-xs text-muted-foreground/50 hover:text-muted-foreground underline underline-offset-2 transition-colors">
+          Reset all
+        </button>
+      </div>
+      <div className="h-1.5 bg-border rounded-full overflow-hidden mb-5">
+        <motion.div className="h-full bg-primary" animate={{ width: `${progress}%` }} transition={{ duration: 0.3 }} />
+      </div>
+      {packingList.categories.map((cat: PackingCategory, ci: number) => (
+        <PackingCategoryGroup key={ci} category={cat} checkedSet={checkedSet} onToggle={toggleItem} />
+      ))}
+    </div>
+  );
+}
+
+// Budget estimator ------------------------------------------------------------
+
+const CATEGORY_COLORS: Record<string, string> = {
+  "entry": "border-l-amber-400",
+  "transport": "border-l-blue-400",
+  "lunch": "border-l-green-400",
+  "dinner": "border-l-green-400",
+  "snack": "border-l-green-400",
+  "food": "border-l-green-400",
+  "accommodation": "border-l-purple-400",
+};
+
+function categoryBorderColor(cat: string): string {
+  const lower = cat.toLowerCase();
+  for (const [key, val] of Object.entries(CATEGORY_COLORS)) {
+    if (lower.includes(key)) return val;
+  }
+  return "border-l-border";
+}
+
+function groupSizeFromTravellerType(tt: string): number {
+  if (tt === "couple") return 2;
+  if (tt === "family" || tt === "group") return 4;
+  return 1;
+}
+
+function BudgetDayRow({ day, sym, multiplier, edits, onEdit, onReset }: {
+  day: BudgetDay; sym: string; multiplier: number;
+  edits: Record<string, number>; onEdit: (k: string, v: number) => void; onReset: (k: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const dayTotal = day.items.reduce((sum, item) => {
+    const key = `${day.day}-${item.description}`;
+    const cost = edits[key] ?? item.estimatedCost;
+    return sum + cost;
+  }, 0) * multiplier;
+
+  return (
+    <div className="border border-border/50">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center justify-between p-4 text-left hover:bg-muted/20 transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          <motion.div animate={{ rotate: open ? 0 : -90 }} transition={{ duration: 0.18 }}>
+            <ChevronDown className="w-4 h-4 text-muted-foreground" />
+          </motion.div>
+          <span className="font-medium text-sm">
+            Day {day.day}
+            {day.date && <span className="text-muted-foreground font-normal"> · {day.date}</span>}
+          </span>
+        </div>
+        <span className="font-mono text-sm text-primary">~{sym}{Math.round(dayTotal)}</span>
+      </button>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }} className="overflow-hidden"
+          >
+            <div className="px-4 pb-4 space-y-2">
+              {day.items.map((item: BudgetLine, i: number) => {
+                const key = `${day.day}-${item.description}`;
+                const editedCost = edits[key] ?? item.estimatedCost;
+                return (
+                  <div key={i} className={`flex items-start gap-3 p-3 border-l-2 bg-muted/10 ${categoryBorderColor(item.category)}`}>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm">{item.description}</p>
+                      {item.notes && <p className="text-xs text-muted-foreground mt-0.5">{item.notes}</p>}
+                      <p className="text-xs text-muted-foreground/60 uppercase tracking-wider mt-1">{item.category}</p>
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <span className="text-xs text-muted-foreground">{sym}</span>
+                      <input
+                        type="number"
+                        value={Math.round(editedCost * multiplier)}
+                        onChange={e => {
+                          const v = parseFloat(e.target.value);
+                          if (!isNaN(v)) onEdit(key, v / multiplier);
+                        }}
+                        className="w-16 text-right text-sm bg-transparent border-b border-border/50 focus:border-primary outline-none font-mono"
+                        min={0}
+                      />
+                      {edits[key] !== undefined && (
+                        <button onClick={() => onReset(key)} className="text-muted-foreground/40 hover:text-muted-foreground text-xs" title="Reset">↺</button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function BudgetEstimatorSection({ planId, budgetEstimate, travellerType }: {
+  planId: number; budgetEstimate: BudgetEstimate; travellerType: string;
+}) {
+  const groupSize = groupSizeFromTravellerType(travellerType);
+  const [perPerson, setPerPerson] = useLocalStorage(`budget-perperson-${planId}`, false);
+  const [edits, setEdits] = useLocalStorage<Record<string, number>>(`budget-edits-${planId}`, {});
+
+  const multiplier = perPerson ? 1 : groupSize;
+  const sym = budgetEstimate.currencySymbol;
+
+  const onEdit = (key: string, val: number) => setEdits(prev => ({ ...prev, [key]: val }));
+  const onReset = (key: string) => setEdits(prev => { const n = { ...prev }; delete n[key]; return n; });
+  const onResetAll = () => setEdits({});
+
+  const totalDailyBase = budgetEstimate.dailyBreakdown.reduce((sum, day) => {
+    return sum + day.items.reduce((ds, item) => {
+      const key = `${day.day}-${item.description}`;
+      return ds + (edits[key] ?? item.estimatedCost);
+    }, 0);
+  }, 0);
+
+  const totalFixed = budgetEstimate.fixedCosts.reduce((sum, fc) => {
+    const key = `fixed-${fc.description}`;
+    return sum + (edits[key] ?? fc.totalEstimated);
+  }, 0);
+
+  const totalLow = Math.round((totalDailyBase + totalFixed) * multiplier * 0.9);
+  const totalMid = Math.round((totalDailyBase + totalFixed) * multiplier);
+  const totalHigh = Math.round((totalDailyBase + totalFixed) * multiplier * 1.2);
+
+  const tierBadgeColor = budgetEstimate.budgetTier === "budget"
+    ? "text-green-400 border-green-400/30 bg-green-400/10"
+    : budgetEstimate.budgetTier === "luxury"
+    ? "text-purple-400 border-purple-400/30 bg-purple-400/10"
+    : "text-blue-400 border-blue-400/30 bg-blue-400/10";
+
+  return (
+    <div className="space-y-6">
+      {/* Header controls */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <span className={`text-xs font-medium uppercase tracking-widest px-2 py-1 border ${tierBadgeColor}`}>
+            {budgetEstimate.budgetTier}
+          </span>
+          <span className="text-muted-foreground text-sm">
+            Estimated: {sym}{totalLow.toLocaleString()} – {sym}{totalHigh.toLocaleString()}
+          </span>
+        </div>
+        <div className="flex items-center gap-3">
+          {Object.keys(edits).length > 0 && (
+            <button onClick={onResetAll} className="text-xs text-muted-foreground/50 hover:text-muted-foreground underline underline-offset-2 transition-colors">
+              Reset to estimates
+            </button>
+          )}
+          {groupSize > 1 && (
+            <div className="flex border border-border overflow-hidden text-xs">
+              <button
+                onClick={() => setPerPerson(true)}
+                className={`px-3 py-1.5 transition-colors ${perPerson ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+              >
+                Per person
+              </button>
+              <button
+                onClick={() => setPerPerson(false)}
+                className={`px-3 py-1.5 transition-colors ${!perPerson ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+              >
+                Total
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Daily breakdown */}
+      <div className="space-y-2">
+        {budgetEstimate.dailyBreakdown.map((day: BudgetDay, i: number) => (
+          <BudgetDayRow key={i} day={day} sym={sym} multiplier={multiplier} edits={edits} onEdit={onEdit} onReset={onReset} />
+        ))}
+      </div>
+
+      {/* Fixed costs */}
+      {budgetEstimate.fixedCosts.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Fixed Costs</p>
+          {budgetEstimate.fixedCosts.map((fc: FixedCost, i: number) => {
+            const key = `fixed-${fc.description}`;
+            const editedTotal = edits[key] ?? fc.totalEstimated;
+            return (
+              <div key={i} className={`flex items-start gap-3 p-3 border-l-2 bg-muted/10 ${categoryBorderColor(fc.category)}`}>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm">{fc.description}</p>
+                  {fc.notes && <p className="text-xs text-muted-foreground mt-0.5">{fc.notes}</p>}
+                  <p className="text-xs text-muted-foreground/60 uppercase tracking-wider mt-1">{sym}{fc.estimatedCostPerNight}/night</p>
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <span className="text-xs text-muted-foreground">{sym}</span>
+                  <input
+                    type="number"
+                    value={Math.round(editedTotal * multiplier)}
+                    onChange={e => { const v = parseFloat(e.target.value); if (!isNaN(v)) onEdit(key, v / multiplier); }}
+                    className="w-20 text-right text-sm bg-transparent border-b border-border/50 focus:border-primary outline-none font-mono"
+                    min={0}
+                  />
+                  {edits[key] !== undefined && (
+                    <button onClick={() => onReset(key)} className="text-muted-foreground/40 hover:text-muted-foreground text-xs" title="Reset">↺</button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Summary card */}
+      <div className="border border-border p-5 bg-muted/10 space-y-2">
+        <div className="flex justify-between text-sm">
+          <span className="text-muted-foreground">Accommodation</span>
+          <span className="font-mono">{sym}{Math.round(totalFixed * multiplier).toLocaleString()}</span>
+        </div>
+        <div className="flex justify-between text-sm">
+          <span className="text-muted-foreground">Daily expenses</span>
+          <span className="font-mono">~{sym}{Math.round(totalDailyBase * multiplier).toLocaleString()}</span>
+        </div>
+        <div className="border-t border-border/50 pt-2 mt-2 flex justify-between font-medium">
+          <span>Estimated total</span>
+          <span className="font-mono text-primary">{sym}{totalLow.toLocaleString()} – {sym}{totalHigh.toLocaleString()}</span>
+        </div>
+        {groupSize > 1 && !perPerson && (
+          <p className="text-xs text-muted-foreground/50 text-right">For {groupSize} people</p>
+        )}
+      </div>
+
+      {/* Local tips */}
+      {budgetEstimate.localTips.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Money-saving Tips</p>
+          {budgetEstimate.localTips.map((tip: string, i: number) => (
+            <div key={i} className="flex gap-3 text-sm text-muted-foreground py-2 border-b border-border/30 last:border-0">
+              <span className="text-primary shrink-0 mt-0.5">→</span>
+              <span>{tip}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Trip checklist -------------------------------------------------------------
+
+function ChecklistCategoryGroup({ category, checkedSet, onToggle }: {
+  category: ChecklistCategory; checkedSet: Set<string>; onToggle: (label: string) => void;
+}) {
+  const [open, setOpen] = useState(true);
+  return (
+    <div>
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="flex items-center gap-2 w-full text-left mb-1 group"
+      >
+        <motion.div animate={{ rotate: open ? 0 : -90 }} transition={{ duration: 0.18 }}>
+          <ChevronDown className="w-3.5 h-3.5 text-muted-foreground/70" />
+        </motion.div>
+        <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground group-hover:text-foreground transition-colors">
+          {category.name}
+        </span>
+      </button>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }} className="overflow-hidden"
+          >
+            <div className="pl-5 mb-4">
+              {category.items.map((item: ChecklistItem, i: number) => {
+                const isChecked = checkedSet.has(item.label);
+                return (
+                  <label
+                    key={i}
+                    className={`flex items-start gap-3 py-2.5 min-h-[44px] cursor-pointer border-b border-border/30 last:border-0 ${isChecked ? "opacity-40" : ""}`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={() => onToggle(item.label)}
+                      className="mt-0.5 h-4 w-4 shrink-0 accent-primary cursor-pointer"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className={`text-sm ${isChecked ? "line-through text-muted-foreground" : ""}`}>{item.label}</span>
+                        {item.essential && <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0" title="Essential" />}
+                        {item.link && (
+                          <a
+                            href={item.link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={e => e.stopPropagation()}
+                            className="flex items-center gap-1 text-xs text-primary/70 hover:text-primary transition-colors"
+                          >
+                            {item.linkLabel ?? "Visit"} <ExternalLink className="w-3 h-3" />
+                          </a>
+                        )}
+                      </div>
+                      {item.detail && <p className="text-xs text-muted-foreground/60 mt-0.5">{item.detail}</p>}
+                    </div>
+                  </label>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function TripChecklistSection({ planId, tripChecklist }: { planId: number; tripChecklist: TripChecklist }) {
+  const [checked, setChecked] = useLocalStorage<string[]>(`checklist-checked-${planId}`, []);
+  const checkedSet = new Set(checked);
+  const allItems = tripChecklist.categories.flatMap(c => c.items);
+  const total = allItems.length;
+  const doneCount = allItems.filter(item => checkedSet.has(item.label)).length;
+  const progress = total > 0 ? (doneCount / total) * 100 : 0;
+
+  const toggleItem = (label: string) => {
+    setChecked(prev => {
+      const s = new Set(prev);
+      if (s.has(label)) s.delete(label); else s.add(label);
+      return Array.from(s);
+    });
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <span className="text-sm text-muted-foreground">{doneCount} of {total} tasks done</span>
+      </div>
+      <div className="h-1.5 bg-border rounded-full overflow-hidden mb-5">
+        <motion.div className="h-full bg-primary" animate={{ width: `${progress}%` }} transition={{ duration: 0.3 }} />
+      </div>
+      {tripChecklist.categories.map((cat: ChecklistCategory, ci: number) => (
+        <ChecklistCategoryGroup key={ci} category={cat} checkedSet={checkedSet} onToggle={toggleItem} />
+      ))}
+    </div>
+  );
+}
+
+// Top-level tab component ----------------------------------------------------
+
+function BeforeYouGoTab({ plan }: { plan: TravelPlan }) {
+  const { tripChecklist, budgetEstimate, packingList } = plan as TravelPlan & {
+    tripChecklist?: TripChecklist | null;
+    budgetEstimate?: BudgetEstimate | null;
+    packingList?: PackingList | null;
+  };
+
+  if (!tripChecklist && !budgetEstimate && !packingList) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 text-center text-muted-foreground">
+        <p className="text-lg mb-2">No "Before You Go" data yet.</p>
+        <p className="text-sm">Regenerate the plan to get a packing list, budget estimate and trip checklist.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-3xl space-y-5">
+      {tripChecklist && (
+        <CollapsibleSection title="Trip Checklist" icon={ClipboardList} storageKey={`btg-collapse-checklist-${plan.id}`}>
+          <TripChecklistSection planId={plan.id} tripChecklist={tripChecklist} />
+        </CollapsibleSection>
+      )}
+      {budgetEstimate && (
+        <CollapsibleSection title="Budget Estimator" icon={Wallet} storageKey={`btg-collapse-budget-${plan.id}`}>
+          <BudgetEstimatorSection planId={plan.id} budgetEstimate={budgetEstimate} travellerType={plan.travellerType} />
+        </CollapsibleSection>
+      )}
+      {packingList && (
+        <CollapsibleSection title="Packing List" icon={Package} storageKey={`btg-collapse-packing-${plan.id}`}>
+          <PackingListSection planId={plan.id} packingList={packingList} />
+        </CollapsibleSection>
+      )}
     </div>
   );
 }

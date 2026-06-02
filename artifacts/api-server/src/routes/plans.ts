@@ -302,6 +302,9 @@ function formatPlan(plan: typeof plansTable.$inferSelect) {
     hotels: (data.hotels ?? { budget: [], midRange: [], luxury: [] }) as unknown,
     restaurants: (data.restaurants ?? []) as unknown[],
     misc: (data.misc ?? []) as unknown[],
+    packingList: (data.packingList ?? null) as unknown,
+    budgetEstimate: (data.budgetEstimate ?? null) as unknown,
+    tripChecklist: (data.tripChecklist ?? null) as unknown,
   };
 }
 

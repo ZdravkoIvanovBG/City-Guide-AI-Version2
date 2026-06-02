@@ -5,10 +5,13 @@
  * City AI Guide API
  * OpenAPI spec version: 0.1.0
  */
+import type { BudgetEstimate } from './budgetEstimate';
 import type { HotelsByTier } from './hotelsByTier';
 import type { MiscEvent } from './miscEvent';
+import type { PackingList } from './packingList';
 import type { PlanDay } from './planDay';
 import type { Restaurant } from './restaurant';
+import type { TripChecklist } from './tripChecklist';
 
 export interface TravelPlan {
   id: number;
@@ -30,4 +33,7 @@ export interface TravelPlan {
   hotels: HotelsByTier;
   restaurants: Restaurant[];
   misc: MiscEvent[];
+  packingList?: PackingList;
+  budgetEstimate?: BudgetEstimate;
+  tripChecklist?: TripChecklist;
 }
