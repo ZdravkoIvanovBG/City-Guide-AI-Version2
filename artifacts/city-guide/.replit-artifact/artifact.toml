@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "City AI Guide"
+version = "1.0.0"
+id = "artifacts/city-guide"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 24730
+
+[services.development]
+run = "pnpm --filter @workspace/city-guide run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/city-guide", "run", "build" ]
+publicDir = "artifacts/city-guide/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "24730"
+BASE_PATH = "/"

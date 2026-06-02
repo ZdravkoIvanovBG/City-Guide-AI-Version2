@@ -1,0 +1,151 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&display=swap');
+@import "tailwindcss";
+@import "tw-animate-css";
+@plugin "@tailwindcss/typography";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-card-border: hsl(var(--card-border));
+
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-popover-border: hsl(var(--popover-border));
+
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-primary-border: var(--primary-border);
+
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-secondary-border: var(--secondary-border);
+
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-muted-border: var(--muted-border);
+
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-accent-border: var(--accent-border);
+
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-destructive-border: var(--destructive-border);
+
+  --font-sans: var(--app-font-sans);
+  --font-serif: var(--app-font-serif);
+  --font-mono: var(--app-font-mono);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+:root, .dark {
+  /* Core Colors */
+  /* Base background: #080C10 */
+  --background: 210 33% 5%;
+  --foreground: 45 20% 90%;
+  
+  /* Borders and UI */
+  --border: 210 20% 15%;
+  --input: 210 20% 15%;
+  --ring: 41 62% 55%;
+
+  /* Cards */
+  --card: 210 30% 7%;
+  --card-foreground: 45 20% 90%;
+  --card-border: 210 20% 15%;
+
+  --popover: 210 30% 7%;
+  --popover-foreground: 45 20% 90%;
+  --popover-border: 210 20% 15%;
+
+  /* Primary (Amber Gold #D4A843) */
+  --primary: 41 62% 55%;
+  --primary-foreground: 210 33% 5%;
+
+  /* Secondary (Muted Teal #4ECDC4) */
+  --secondary: 176 56% 55%;
+  --secondary-foreground: 210 33% 5%;
+
+  /* Muted */
+  --muted: 210 20% 12%;
+  --muted-foreground: 210 10% 60%;
+
+  /* Accent */
+  --accent: 210 20% 12%;
+  --accent-foreground: 45 20% 90%;
+
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 210 33% 5%;
+
+  --app-font-sans: "DM Sans", sans-serif;
+  --app-font-serif: "Cormorant Garamond", serif;
+  --app-font-mono: Menlo, monospace;
+  
+  --radius: 0.25rem;
+
+  color-scheme: dark;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground overflow-x-hidden;
+    cursor: none; /* For custom cursor */
+  }
+
+  /* Typography globals */
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-serif font-medium tracking-tight;
+  }
+}
+
+/* Custom noise */
+.bg-noise {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 50;
+  opacity: 0.04;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+}
+
+/* Page transitions */
+.page-enter {
+  opacity: 0;
+  transform: translateY(10px);
+}
+.page-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+}
+.page-exit {
+  opacity: 1;
+}
+.page-exit-active {
+  opacity: 0;
+  transition: opacity 0.4s ease-in;
+}
+
+/* Hide default cursor on interactive elements */
+a, button, input, select, textarea {
+  cursor: none;
+}

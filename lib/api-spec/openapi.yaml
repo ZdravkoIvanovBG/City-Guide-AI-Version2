@@ -3,20 +3,28 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: City AI Guide API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication operations
+  - name: cities
+    description: City search and autocomplete
+  - name: plans
+    description: Travel plan generation and management
+  - name: profile
+    description: User profile and stats
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +32,382 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /auth/register:
+    post:
+      operationId: register
+      tags: [auth]
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterInput"
+      responses:
+        "201":
+          description: Registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResult"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Email already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+      responses:
+        "200":
+          description: Logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResult"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/refresh:
+    post:
+      operationId: refreshToken
+      tags: [auth]
+      summary: Refresh access token using httpOnly cookie
+      responses:
+        "200":
+          description: New tokens
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResult"
+        "401":
+          description: Invalid or expired refresh token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Logout and clear refresh token cookie
+      responses:
+        "204":
+          description: Logged out
+
+  /cities/autocomplete:
+    get:
+      operationId: getCityAutocomplete
+      tags: [cities]
+      summary: Autocomplete city search using Gemini
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: City suggestions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CityOption"
+        "400":
+          description: Missing query
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /plans:
+    get:
+      operationId: getPlans
+      tags: [plans]
+      summary: Get saved plans for the current user
+      responses:
+        "200":
+          description: List of plans
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PlanSummary"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: generatePlan
+      tags: [plans]
+      summary: Generate a new AI travel plan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlanInput"
+      responses:
+        "201":
+          description: Generated plan
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TravelPlan"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: AI generation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /plans/{id}:
+    get:
+      operationId: getPlan
+      tags: [plans]
+      summary: Get a travel plan by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Travel plan
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TravelPlan"
+        "404":
+          description: Plan not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deletePlan
+      tags: [plans]
+      summary: Delete a saved plan
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Plan not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /plans/{id}/regenerate:
+    post:
+      operationId: regeneratePlan
+      tags: [plans]
+      summary: Regenerate a plan with fresh AI output
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Regenerated plan
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TravelPlan"
+        "404":
+          description: Plan not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /plans/share/{shareCode}:
+    get:
+      operationId: getPublicPlan
+      tags: [plans]
+      summary: Get a publicly shared plan by share code
+      parameters:
+        - name: shareCode
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Shared travel plan
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TravelPlan"
+        "404":
+          description: Plan not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /plans/featured:
+    get:
+      operationId: getFeaturedCities
+      tags: [plans]
+      summary: Get featured city photos for homepage
+      responses:
+        "200":
+          description: Featured cities with photos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FeaturedCity"
+
+  /profile:
+    get:
+      operationId: getProfile
+      tags: [profile]
+      summary: Get current user profile
+      responses:
+        "200":
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      operationId: updateProfile
+      tags: [profile]
+      summary: Update user profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProfileUpdate"
+      responses:
+        "200":
+          description: Updated profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /profile/avatar:
+    post:
+      operationId: uploadAvatar
+      tags: [profile]
+      summary: Upload user avatar (base64)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AvatarInput"
+      responses:
+        "200":
+          description: Updated profile with new avatar
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+        "400":
+          description: Invalid avatar data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /profile/stats:
+    get:
+      operationId: getTravelStats
+      tags: [profile]
+      summary: Get travel statistics for the current user
+      responses:
+        "200":
+          description: Travel statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TravelStats"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /cities/photo:
+    get:
+      operationId: getCityPhoto
+      tags: [cities]
+      summary: Get a Google Places photo URL for a search query
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Photo URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PhotoResult"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +418,349 @@ components:
       required:
         - status
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    RegisterInput:
+      type: object
+      required: [name, email, password]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+
+    LoginInput:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+
+    AuthResult:
+      type: object
+      required: [accessToken, user]
+      properties:
+        accessToken:
+          type: string
+        user:
+          $ref: "#/components/schemas/UserProfile"
+
+    UserProfile:
+      type: object
+      required: [id, name, email, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        avatarUrl:
+          type: ["string", "null"]
+        bio:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    ProfileUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        email:
+          type: string
+          format: email
+        bio:
+          type: ["string", "null"]
+        password:
+          type: string
+          minLength: 8
+
+    AvatarInput:
+      type: object
+      required: [avatarData]
+      properties:
+        avatarData:
+          type: string
+          description: Base64-encoded image data URI
+
+    TravelStats:
+      type: object
+      required: [totalCities, totalCountries, totalDays, visitedCities]
+      properties:
+        totalCities:
+          type: integer
+        totalCountries:
+          type: integer
+        totalDays:
+          type: integer
+        favouriteContinent:
+          type: ["string", "null"]
+        visitedCities:
+          type: array
+          items:
+            $ref: "#/components/schemas/VisitedCity"
+
+    VisitedCity:
+      type: object
+      required: [city, country, lat, lng]
+      properties:
+        city:
+          type: string
+        country:
+          type: string
+        lat:
+          type: number
+        lng:
+          type: number
+
+    CityOption:
+      type: object
+      required: [city, country, countryCode]
+      properties:
+        city:
+          type: string
+        country:
+          type: string
+        countryCode:
+          type: string
+
+    FeaturedCity:
+      type: object
+      required: [city, country, tagline, photoUrl]
+      properties:
+        city:
+          type: string
+        country:
+          type: string
+        tagline:
+          type: string
+        photoUrl:
+          type: string
+
+    PhotoResult:
+      type: object
+      required: [photoUrl]
+      properties:
+        photoUrl:
+          type: string
+
+    PlanInput:
+      type: object
+      required: [city, country, startDate, endDate, travellerType]
+      properties:
+        city:
+          type: string
+        country:
+          type: string
+        startDate:
+          type: string
+          description: ISO date string (YYYY-MM-DD)
+        endDate:
+          type: string
+          description: ISO date string (YYYY-MM-DD)
+        budget:
+          type: ["string", "null"]
+          description: "No preference | Budget traveller | Mid-range | Luxury"
+        preferences:
+          type: ["string", "null"]
+          description: Free-text interests
+        travellerType:
+          type: string
+          description: "Solo | Couple | Family | Group"
+
+    PlanSummary:
+      type: object
+      required: [id, shareCode, city, country, startDate, endDate, createdAt, photoUrl]
+      properties:
+        id:
+          type: integer
+        shareCode:
+          type: string
+        city:
+          type: string
+        country:
+          type: string
+        startDate:
+          type: string
+        endDate:
+          type: string
+        travellerType:
+          type: string
+        budget:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        photoUrl:
+          type: string
+
+    TravelPlan:
+      type: object
+      required: [id, shareCode, city, country, startDate, endDate, travellerType, tripSummary, days, hotels, restaurants, misc, createdAt, photoUrl]
+      properties:
+        id:
+          type: integer
+        shareCode:
+          type: string
+        city:
+          type: string
+        country:
+          type: string
+        startDate:
+          type: string
+        endDate:
+          type: string
+        travellerType:
+          type: string
+        budget:
+          type: ["string", "null"]
+        preferences:
+          type: ["string", "null"]
+        tripSummary:
+          type: string
+        photoUrl:
+          type: string
+        createdAt:
+          type: string
+        days:
+          type: array
+          items:
+            $ref: "#/components/schemas/PlanDay"
+        hotels:
+          $ref: "#/components/schemas/HotelsByTier"
+        restaurants:
+          type: array
+          items:
+            $ref: "#/components/schemas/Restaurant"
+        misc:
+          type: array
+          items:
+            $ref: "#/components/schemas/MiscEvent"
+
+    PlanDay:
+      type: object
+      required: [dayNumber, date, destinations]
+      properties:
+        dayNumber:
+          type: integer
+        date:
+          type: string
+        destinations:
+          type: array
+          items:
+            $ref: "#/components/schemas/Destination"
+
+    Destination:
+      type: object
+      required: [name, category, summary, insiderTips, entryCost, bestTimeToVisit, photoUrl]
+      properties:
+        name:
+          type: string
+        category:
+          type: string
+        summary:
+          type: string
+        insiderTips:
+          type: array
+          items:
+            type: string
+        entryCost:
+          type: string
+        howToGetThere:
+          type: object
+          additionalProperties:
+            type: string
+        bestTimeToVisit:
+          type: string
+        photoUrl:
+          type: string
+
+    HotelsByTier:
+      type: object
+      required: [budget, midRange, luxury]
+      properties:
+        budget:
+          type: array
+          items:
+            $ref: "#/components/schemas/Hotel"
+        midRange:
+          type: array
+          items:
+            $ref: "#/components/schemas/Hotel"
+        luxury:
+          type: array
+          items:
+            $ref: "#/components/schemas/Hotel"
+
+    Hotel:
+      type: object
+      required: [name, neighbourhood, description, priceRange, type]
+      properties:
+        name:
+          type: string
+        neighbourhood:
+          type: string
+        description:
+          type: string
+        priceRange:
+          type: string
+        type:
+          type: string
+        photoUrl:
+          type: ["string", "null"]
+        mapsUrl:
+          type: ["string", "null"]
+        bookingUrl:
+          type: ["string", "null"]
+        airbnbUrl:
+          type: ["string", "null"]
+
+    Restaurant:
+      type: object
+      required: [name, cuisine, mustTryDish, neighbourhood, priceRange, description]
+      properties:
+        name:
+          type: string
+        cuisine:
+          type: string
+        mustTryDish:
+          type: string
+        neighbourhood:
+          type: string
+        priceRange:
+          type: string
+        description:
+          type: string
+        photoUrl:
+          type: ["string", "null"]
+        mapsUrl:
+          type: ["string", "null"]
+
+    MiscEvent:
+      type: object
+      required: [name, dateOrFrequency, description, location, isFree]
+      properties:
+        name:
+          type: string
+        dateOrFrequency:
+          type: string
+        description:
+          type: string
+        location:
+          type: string
+        isFree:
+          type: boolean

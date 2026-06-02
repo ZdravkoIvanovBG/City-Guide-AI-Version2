@@ -1,0 +1,360 @@
+Build a full-stack "City AI Guide" web app — a smart travel planning platform powered by the Gemini API. Users choose a city, set their preferences, and receive a fully AI-generated multi-day travel plan. Full spec below.
+
+---
+
+## Tech Stack
+- Frontend: React + Vite + TailwindCSS
+- Backend: Node.js + Express
+- Database: PostgreSQL (via Prisma ORM)
+- Auth: JWT (access + refresh tokens), bcrypt
+- AI: Google Gemini API — model: gemini-2.5-flash (env var: GEMINI_API_KEY)
+- Photos: Google Places Photos API (env var: GOOGLE_MAPS_API_KEY — same key as Maps)
+- Maps: Google Maps Embed API + Directions API (env var: GOOGLE_MAPS_API_KEY)
+
+---
+
+## Photo Strategy — Google Places Photos (used everywhere)
+
+All photos across the entire app are fetched from the Google Places Photos API.
+There is NO Unsplash integration anywhere in this project.
+
+How it works:
+1. Call the Places Text Search endpoint with a search string (e.g. "Eiffel Tower Paris")
+2. Get the place_id from the first result
+3. Fetch the photos array for that place_id using the Place Details endpoint
+4. Construct the photo URL:
+   https://maps.googleapis.com/maps/api/place/photo?maxwidth=1200&photo_reference={photoReference}&key={GOOGLE_MAPS_API_KEY}
+5. Use the first photo reference returned
+
+Create a reusable backend helper function: getPlacePhoto(searchQuery: string): Promise<string>
+that encapsulates this flow and returns a ready-to-use photo URL.
+Cache photo URLs in the database to avoid redundant API calls.
+
+Fallback: if Places returns no photo for a query, use a solid dark gradient
+placeholder with the location name as text — never a broken image.
+
+---
+
+## Page 1 — Home Page
+
+### Hero section
+- Full-viewport hero with a looping, muted video background (source: /public/hero.mp4,
+  downloaded from Mixkit.co — free royalty-free travel footage)
+- Bold headline: "Your AI guide to every city on earth" in enormous Cormorant
+  Garamond type, fading in with a staggered word-by-word reveal animation on load
+- Large city search bar floats over the hero, glassmorphism style
+
+### Featured cities section
+- 6 featured city cards: Paris, Tokyo, New York, Barcelona, Istanbul, Bali
+- Each card photo is fetched via getPlacePhoto("[city name] city skyline")
+- Each card: full-bleed photo, city name, country, tagline
+- Clicking a card goes directly to the Plan Builder for that city
+
+### Search section
+- "Don't see your city?" label above the search bar
+
+---
+
+## City Search Autocomplete
+
+Do NOT use a bundled city dataset. Call the Gemini API directly as the user
+types (debounced at 400ms). Send this prompt:
+
+  "The user is searching for a city to visit. Their partial input is: '[input]'.
+   Return a JSON array of exactly 6 matching cities from anywhere in the world,
+   including small or lesser-known ones. Each object: { city, country, countryCode }.
+   Order by most likely travel destination first. Return ONLY the JSON array."
+
+Render suggestions in a dropdown with staggered slide-in animation (40ms offset
+per item). On selection, pass the full { city, country } to the Plan Builder.
+
+---
+
+## Page 2 — Plan Builder (pre-generation form)
+
+### City header
+- City name and country displayed in enormous Cormorant Garamond type,
+  overlaid bottom-aligned on a full-viewport city hero photo
+- Hero photo fetched via: getPlacePhoto("[city] [country] city")
+- The form fields appear as a semi-transparent glassmorphism drawer that slides
+  up from the bottom over the city photo — city is always visible behind it
+
+### Form fields
+- Date range picker: start date + end date (max 7 days). Show live day count ("4 days selected")
+- Budget dropdown: No preference / Budget traveller / Mid-range / Luxury (optional)
+- Preferences textarea: "Any specific interests? (e.g. street food, museums, nightlife, nature)" — optional
+- Traveller type toggle: Solo / Couple / Family / Group
+- "Explore [city] →" button — large, full-width, amber background, shimmer sweep on hover
+
+### Loading state
+- Full-page cinematic loading screen
+- Animated text cycling through phrases like:
+  "Wandering the alleyways of [city]..."
+  "Negotiating at the spice market..."
+  "Finding the best table in the house..."
+- Background: slow cross-fading collage of city photos fetched via getPlacePhoto
+- Thin amber progress bar animates 0→90% during generation, snaps to 100% on complete
+
+---
+
+## Page 3 — Generated Plan Page
+
+Four tabs in a sticky floating pill-shaped nav: **Itinerary | Hotels | Restaurants | Misc**
+
+---
+
+### Tab 1 — Itinerary
+
+Gemini returns a structured JSON plan. For each destination:
+- `name` (string)
+- `category` (Museum / Market / Park / Landmark / Neighbourhood / etc.)
+- `summary` (2–3 sentences)
+- `insiderTips` (array of 2–3 strings)
+- `entryCost` (e.g. "Free", "€12 adults", "Pay-what-you-wish")
+- `howToGetThere` (object — only include modes that exist in that city:
+  walking / subway / bus / tram / taxi — each a 1–2 sentence instruction)
+- `bestTimeToVisit` (string)
+- `photoSearchQuery` (clean search string for Places, e.g. "Sagrada Familia Barcelona")
+
+The backend calls getPlacePhoto(destination.photoSearchQuery) for each destination
+and returns the photo URL alongside the plan data. No photo fetching happens
+client-side for itinerary destinations.
+
+**Destination card UI:**
+- Full-bleed photo (55% of card height) with subtle scroll parallax
+- Category badge + destination name in Cormorant Garamond
+- Summary text
+- Transport mode pills (icons + label) — clicking a pill shows its instruction with a crossfade
+- Insider tips — staggered fade-in on scroll into view (Intersection Observer)
+- Entry cost badge: green if "Free", amber if paid
+- Best time to visit row
+
+Day headers: large full-width text ("Day 1 — Monday, June 3") with the day
+number as a huge faded watermark behind it.
+
+---
+
+### Tab 2 — Hotels
+
+Segmented control at top: **Budget | Mid-range | Luxury**
+
+Fetch hotels via Google Places API (Text Search for "hotels in [city]", filtered
+by price level). If Places returns results, show them. If not, fall back to
+Gemini-generated suggestions (clearly labelled "AI-suggested — verify availability").
+
+Each listing:
+- Name + neighbourhood
+- Photo via getPlacePhoto("[hotel name] [city]")
+- Short description (1–2 lines)
+- Approximate price range per night
+- Star rating or type badge (Boutique / Hostel / Apartment / 5-Star)
+- "View on Google Maps" link (maps.google.com search URL)
+- "Search on Booking.com" link (pre-filled URL)
+- For apartment/budget options: "Search on Airbnb" link (pre-filled city search URL)
+- Each card has a subtle mouse-tilt effect (±4deg perspective tilt tracking cursor)
+
+---
+
+### Tab 3 — Restaurants
+
+Gemini generates 8–10 curated restaurant picks. Each card:
+- Restaurant name
+- Photo via getPlacePhoto("[restaurant name] [city] restaurant")
+- Cuisine type + vibe
+- Must-try dish
+- Neighbourhood + price range (€ / €€ / €€€)
+- Why it's recommended
+- "Find on Google Maps" link
+
+---
+
+### Tab 4 — Misc / Events
+
+Gemini generates 5–8 events or experiences during the user's stay. Timeline layout
+(date/frequency on left, event card on right). Each item:
+- Name, date or frequency, description, location
+- Free or ticketed badge
+
+---
+
+## Gemini Prompt Design
+
+Single system prompt returning ONLY valid JSON, no markdown, no preamble:
+
+```json
+{
+  "city": "string",
+  "tripSummary": "string",
+  "days": [
+    {
+      "dayNumber": 1,
+      "date": "string",
+      "destinations": [
+        {
+          "name": "string",
+          "category": "string",
+          "summary": "string",
+          "insiderTips": ["string"],
+          "entryCost": "string",
+          "howToGetThere": { "walking": "string", "subway": "string" },
+          "bestTimeToVisit": "string",
+          "photoSearchQuery": "string"
+        }
+      ]
+    }
+  ],
+  "hotels": {
+    "budget": [{ "name": "string", "neighbourhood": "string", "description": "string", "priceRange": "string", "type": "string" }],
+    "midRange": [],
+    "luxury": []
+  },
+  "restaurants": [{ "name": "string", "cuisine": "string", "mustTryDish": "string", "neighbourhood": "string", "priceRange": "string", "description": "string" }],
+  "misc": [{ "name": "string", "dateOrFrequency": "string", "description": "string", "location": "string", "isFree": true }]
+}
+```
+
+Parse with try/catch. Show a friendly error state with a retry button if JSON
+is malformed. Cache the full generated plan + all photo URLs in the database so
+re-opening never triggers a new API call.
+
+---
+
+## User Authentication & Profile
+
+### Auth
+- Register: name, email, password
+- Login: email + password → JWT access token in memory, refresh token in httpOnly cookie
+- Protected routes: saved plans, profile page
+
+### Profile page
+- Avatar (uploadable — store on server filesystem or as base64) with initials fallback
+- Username, bio (optional), member since date
+- Edit profile: name, email, password, avatar
+
+### Travel stats
+- Total cities visited, total countries, total days planned
+- Favourite continent (most plans)
+- Interactive 3D globe (Three.js) showing visited cities as glowing amber pulsing pins
+- On mobile: flat SVG world map (react-simple-maps) with visited countries highlighted
+- Stats as large editorial numbers: "12 cities", "8 countries", "34 days planned"
+
+### Saved plans
+- Auto-saved on generation, linked to user account
+- Horizontal filmstrip scroll (snap scrolling) of saved plan cards
+- Each card: city photo via getPlacePhoto("[city] skyline"), city name, dates, day count
+- Delete option per card
+
+---
+
+## Extra Features
+
+- **Share plan**: unique public URL per plan (/plan/abc123) — viewable without login
+- **Export to PDF**: "Download PDF" button using html2pdf.js — clean print layout
+- **Regenerate**: re-calls Gemini with same params, requests a fresh variant, overwrites cache
+- **Dark mode only** — no light mode toggle, the entire app is dark-first
+- **Responsive** — desktop, tablet, mobile
+- **Toast notifications** for all user actions
+
+---
+
+## APIs — Keys Required
+
+| Service | Used for | Env var |
+|---|---|---|
+| Google Gemini (gemini-2.5-flash) | Plan generation + city autocomplete | GEMINI_API_KEY |
+| Google Maps Embed | Map display per destination | GOOGLE_MAPS_API_KEY |
+| Google Places Text Search | Place lookup for photo references + hotels | GOOGLE_MAPS_API_KEY |
+| Google Places Photos | ALL photos across the entire app | GOOGLE_MAPS_API_KEY |
+| Google Directions API | Transit directions in how-to-get-there | GOOGLE_MAPS_API_KEY |
+
+One Google Cloud project. One API key. Enable: Maps JavaScript API, Places API,
+Directions API, Maps Embed API.
+
+There is no Unsplash, no Pexels, no other image source. Google Places Photos only.
+
+---
+
+## Folder Structure
+/client      → React + Vite frontend
+/server      → Express API
+/helpers   → placePhoto.js (getPlacePhoto helper), gemini.js
+/prisma      → schema.prisma + migrations
+/public      → hero.mp4 (download from Mixkit.co before starting)
+.env         → GEMINI_API_KEY, GOOGLE_MAPS_API_KEY, DATABASE_URL, JWT_SECRET, JWT_REFRESH_SECRET
+
+---
+
+## Frontend Design — Immersive & High-End Visual Experience
+
+This is a travel product. The frontend must feel like a premium editorial travel
+magazine crossed with an interactive experience — not a typical web app. Every
+screen should make the user FEEL like they're already in the city.
+
+### Overall aesthetic direction
+- Dark-first design. Base background: #080C10
+- Accent: warm amber/gold (#D4A843) for all interactive elements
+- Secondary highlight: muted teal (#4ECDC4)
+- Display font: "Cormorant Garamond" (Google Fonts) — large, elegant, editorial
+- UI font: "DM Sans" (Google Fonts)
+- All page transitions: cinematic fade or slide via Framer Motion
+- Custom cursor: small glowing dot with slight trail, expands to ring on hover
+- Subtle grain/noise texture overlay on all backgrounds (SVG feTurbulence or CSS)
+
+### Home page hero
+- Full-viewport looping muted video (/public/hero.mp4 from Mixkit.co)
+- Headline in Cormorant Garamond at clamp(4rem, 10vw, 9rem), word-by-word staggered
+  fade-in on load via GSAP timeline
+- Search bar: glassmorphism (backdrop-filter: blur(20px), 1px border, inner glow)
+- Parallax scroll: video moves at 60% page scroll speed
+- Featured city cards: asymmetric masonry grid. Hover: card scales, photo fills,
+  city name slides up in giant type
+
+### 3D Globe (Three.js)
+- Home page and profile page
+- Dark sphere with glowing white GeoJSON country border lines
+- Visited cities: glowing amber pulsing pins
+- Auto-rotates; pauses and snaps to city on selection
+- Lazy-init: only mount when in viewport (Intersection Observer)
+- Dynamic import to keep it out of the main bundle
+- Mobile fallback: react-simple-maps flat SVG map
+
+### Plan Builder page
+- Full-viewport city photo (Google Places Photos), city name bottom-aligned in
+  enormous Cormorant type
+- Form as glassmorphism bottom drawer sliding up over the photo
+- Custom inline calendar date picker (not native input)
+- "Explore [city] →" CTA: amber background, full-width, shimmer sweep on hover
+
+### Loading screen
+- Cinematic full-page takeover
+- Cycling immersive phrases using GSAP text animation
+- Background: slow cross-fading city photos (Google Places Photos)
+- Amber progress bar: 0→90% during generation, 100% on complete
+
+### Generated Plan page
+- Sticky floating pill nav (Itinerary / Hotels / Restaurants / Misc), selected tab glows amber
+- Destination cards: full-bleed photo (55% height), scroll parallax on photo
+- Transport pills with crossfade on mode switch
+- Insider tips: staggered Intersection Observer fade-in
+- Hotel cards: ±4deg mouse-tracking perspective tilt
+- Day headers: huge faded watermark day number behind the text
+
+### Profile page
+- Small Three.js globe with visited city pins + tooltips
+- Stats as oversized editorial numbers
+- Saved plans as horizontal snap-scroll filmstrip
+
+### Animation libraries
+- Framer Motion — page transitions, layout animations, entrance effects
+- GSAP — hero text reveal, loading screen sequences
+- Lenis — smooth scroll inertia across the whole app
+- Three.js — 3D globe (dynamic import, viewport-gated)
+- react-simple-maps — mobile map fallback
+
+### Performance rules
+- All images: loading="lazy" + Intersection Observer
+- Three.js: dynamic import only, init only when in viewport
+- Video: muted, autoplay, preload="metadata"
+- Respect prefers-reduced-motion: wrap all GSAP/Framer animations in a check,
+  disable or reduce them if the user has reduced motion enabled
+- Photo URLs cached in DB — never re-fetch a photo already stored
