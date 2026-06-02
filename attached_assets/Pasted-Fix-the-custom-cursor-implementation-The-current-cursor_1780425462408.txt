@@ -1,0 +1,93 @@
+Fix the custom cursor implementation. The current cursor is buggy —
+it jumps, flickers, and is inconsistent. Replace it entirely with a
+clean, reliable implementation.
+
+## Remove the old cursor code completely
+Delete whatever cursor implementation currently exists. We are
+rewriting it from scratch.
+
+## New implementation rules
+
+1. Use a single React component: <CustomCursor />
+   Mount it once inside App.jsx at the root level, outside of any
+   router or page components so it persists across all page transitions.
+
+2. Use useRef for the cursor DOM element — NOT useState. Updating
+   state on every mousemove causes re-renders and is the main reason
+   cursors flicker and jump.
+
+3. Move the cursor using direct DOM style manipulation inside the
+   mousemove handler:
+     cursorRef.current.style.transform = `translate(${x}px, ${y}px)`
+   Never use top/left positioning. transform is GPU-accelerated and
+   does not cause layout reflow.
+
+4. Use CSS transition on the cursor element for the smooth trail:
+     transition: transform 0.12s ease-out
+   This gives the subtle lag/trail feel without needing requestAnimationFrame
+   loops or spring physics libraries.
+
+5. Hide the cursor when the mouse leaves the window (mouseleave on
+   document) and show it again on mouseenter. Use opacity for this,
+   not display:none, so the transition stays smooth.
+
+6. The cursor should start hidden (opacity: 0) and become visible
+   only after the first mousemove event fires. This prevents it from
+   appearing at position 0,0 on page load.
+
+7. Scale up on hover using a CSS class toggled with addEventListener:
+   - Add class "cursor--hover" to the cursor element on mouseenter
+     of any element that is: a, button, [role="button"], label, input,
+     textarea, select, [data-cursor-hover]
+   - Remove the class on mouseleave of those elements
+   - In CSS: .cursor--hover { transform: scale(2.5); }
+   - Combine with the translate using a CSS variable trick:
+       style on element: --x: Xpx; --y: Ypx;
+       transform: translate(var(--x), var(--y)) scale(1)
+       &.cursor--hover: transform: translate(var(--x), var(--y)) scale(2.5)
+     OR handle scale separately on an inner element so translate and
+     scale don't conflict.
+
+8. Structure the cursor as two elements to separate translate from scale:
+     <div ref={cursorRef} class="cursor-root">   ← handles translate only
+       <div class="cursor-inner">                 ← handles scale + appearance
+     </div>
+
+   CSS:
+     .cursor-root {
+       position: fixed;
+       top: 0; left: 0;
+       pointer-events: none;
+       z-index: 99999;
+       will-change: transform;
+     }
+     .cursor-inner {
+       width: 12px; height: 12px;
+       background: #D4A843;
+       border-radius: 50%;
+       transform: translate(-50%, -50%);
+       transition: transform 0.2s ease, background 0.2s ease, opacity 0.2s ease;
+     }
+     .cursor-root.cursor--hover .cursor-inner {
+       transform: translate(-50%, -50%) scale(2.5);
+       background: transparent;
+       border: 1.5px solid #D4A843;
+     }
+
+9. Hide the native system cursor on everything:
+     * { cursor: none !important; }
+   Put this in the global CSS file. The !important is necessary to
+   override Tailwind and any component-level cursor styles.
+
+10. The component must clean up all event listeners in the useEffect
+    return function to avoid memory leaks on unmount.
+
+## What the final cursor should look like
+- Default state: small solid amber dot (12px)
+- Hover state: dot expands to a larger hollow ring (amber border,
+  transparent fill) — smooth transition
+- Movement: follows the mouse with a very slight ease-out lag (0.12s)
+  giving it a premium trailing feel without being slow or jumpy
+- No flickering, no jumping to 0,0, no disappearing mid-page
+
+Do not use any third-party cursor libraries. Pure React + CSS only.

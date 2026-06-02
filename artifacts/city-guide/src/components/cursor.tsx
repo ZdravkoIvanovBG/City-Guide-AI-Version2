@@ -1,50 +1,65 @@
-import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
+import { useEffect, useRef } from "react";
+
+const HOVER_SELECTORS = "a, button, [role='button'], label, input, textarea, select, [data-cursor-hover]";
 
 export function CustomCursor() {
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
-  const [isHovering, setIsHovering] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const updateMousePosition = (e: MouseEvent) => {
-      setMousePosition({ x: e.clientX, y: e.clientY });
-      
-      const target = e.target as HTMLElement;
-      const isInteractive = 
-        target.tagName.toLowerCase() === 'a' || 
-        target.tagName.toLowerCase() === 'button' ||
-        target.closest('a') !== null ||
-        target.closest('button') !== null ||
-        target.classList.contains('interactive');
-        
-      setIsHovering(isInteractive);
+    const root = rootRef.current;
+    if (!root) return;
+
+    let visible = false;
+
+    const onMouseMove = (e: MouseEvent) => {
+      root.style.transform = `translate(${e.clientX}px, ${e.clientY}px)`;
+      if (!visible) {
+        root.style.opacity = "1";
+        visible = true;
+      }
     };
 
-    window.addEventListener("mousemove", updateMousePosition);
-    return () => window.removeEventListener("mousemove", updateMousePosition);
+    const onMouseLeave = () => {
+      root.style.opacity = "0";
+      visible = false;
+    };
+
+    const onMouseEnter = () => {
+      if (visible) root.style.opacity = "1";
+    };
+
+    const onHoverEnter = (e: MouseEvent) => {
+      const target = e.target as Element;
+      if (target.closest(HOVER_SELECTORS)) {
+        root.classList.add("cursor--hover");
+      }
+    };
+
+    const onHoverLeave = (e: MouseEvent) => {
+      const target = e.target as Element;
+      if (target.closest(HOVER_SELECTORS)) {
+        root.classList.remove("cursor--hover");
+      }
+    };
+
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseleave", onMouseLeave);
+    document.addEventListener("mouseenter", onMouseEnter);
+    document.addEventListener("mouseover", onHoverEnter);
+    document.addEventListener("mouseout", onHoverLeave);
+
+    return () => {
+      document.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mouseleave", onMouseLeave);
+      document.removeEventListener("mouseenter", onMouseEnter);
+      document.removeEventListener("mouseover", onHoverEnter);
+      document.removeEventListener("mouseout", onHoverLeave);
+    };
   }, []);
 
   return (
-    <>
-      <motion.div
-        className="fixed top-0 left-0 w-2 h-2 bg-primary rounded-full pointer-events-none z-[100]"
-        animate={{
-          x: mousePosition.x - 4,
-          y: mousePosition.y - 4,
-          scale: isHovering ? 0 : 1,
-        }}
-        transition={{ type: "spring", stiffness: 500, damping: 28, mass: 2 }}
-      />
-      <motion.div
-        className="fixed top-0 left-0 w-8 h-8 border border-primary rounded-full pointer-events-none z-[100]"
-        animate={{
-          x: mousePosition.x - 16,
-          y: mousePosition.y - 16,
-          scale: isHovering ? 1.5 : 1,
-          backgroundColor: isHovering ? "rgba(212, 168, 67, 0.1)" : "rgba(212, 168, 67, 0)",
-        }}
-        transition={{ type: "spring", stiffness: 250, damping: 20, mass: 1 }}
-      />
-    </>
+    <div ref={rootRef} className="cursor-root">
+      <div className="cursor-inner" />
+    </div>
   );
 }

@@ -101,17 +101,45 @@
 @layer base {
   * {
     @apply border-border;
+    cursor: none !important;
   }
 
   body {
     @apply font-sans antialiased bg-background text-foreground overflow-x-hidden;
-    cursor: none; /* For custom cursor */
   }
 
   /* Typography globals */
   h1, h2, h3, h4, h5, h6 {
     @apply font-serif font-medium tracking-tight;
   }
+}
+
+/* Custom cursor */
+.cursor-root {
+  position: fixed;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 99999;
+  will-change: transform;
+  opacity: 0;
+  transition: transform 0.12s ease-out, opacity 0.2s ease;
+}
+
+.cursor-inner {
+  width: 12px;
+  height: 12px;
+  background: #D4A843;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transition: transform 0.2s ease, background 0.2s ease, border 0.2s ease;
+  border: 1.5px solid transparent;
+}
+
+.cursor-root.cursor--hover .cursor-inner {
+  transform: translate(-50%, -50%) scale(2.5);
+  background: transparent;
+  border-color: #D4A843;
 }
 
 /* Custom noise */
