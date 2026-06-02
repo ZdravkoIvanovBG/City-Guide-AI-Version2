@@ -1,0 +1,53 @@
+On the profile page, implement two things:
+
+## 1. Delete saved plans
+
+Each saved plan card already exists in the filmstrip scroll.
+Add a delete button to every card:
+- A small trash icon in the top-right corner of the card
+- On hover the icon turns red
+- Clicking it opens a confirmation modal ("Delete this plan? This
+  cannot be undone") with a Cancel and a Delete button
+- On confirm: call DELETE /api/plans/:id on the backend, remove the
+  plan from the database, and remove the card from the UI instantly
+  using Framer Motion layout animation so the filmstrip reflows
+  smoothly without a page reload
+- Show a toast notification: "Plan deleted"
+- The backend must verify the plan belongs to the logged-in user
+  before deleting — never allow deleting another user's plan
+
+## 2. Interactive 3D world map showing visited countries and cities
+
+Build a Three.js globe component <TravelGlobe /> and place it
+prominently on the profile page above the stats section.
+
+### Globe appearance
+- Dark sphere, base color #0a0f14
+- Country border lines rendered from a world GeoJSON (use
+  world-110m.json from the topojson-world-110m package, converted
+  with topojson-client). Lines glow softly white/grey (#ffffff30)
+- Visited countries: filled with a subtle amber glow (#D4A84320 fill,
+  #D4A843 border line) — a country counts as visited if the user has
+  at least one saved plan in a city in that country
+- Visited cities: glowing amber pin dots on the globe surface,
+  positioned using lat/lng coordinates. When Gemini generates a plan,
+  store the city's lat/lng in the database (ask Gemini to return
+  lat and lng as part of the plan JSON, or geocode with Places API)
+- City pins pulse gently with a CSS/shader animation
+- Hovering a city pin shows a tooltip with the city name and country
+
+### Globe behavior
+- Auto-rotates slowly on load (pause on user interaction, resume
+  after 3 seconds of inactivity)
+- Mouse drag to rotate manually
+- Scroll wheel to zoom in/out (min/max zoom clamped)
+- On mobile: replace with react-simple-maps flat SVG world map,
+  visited countries filled amber, city dots shown as small circles
+
+### Performance
+- Dynamic import the entire component so Three.js is not in the
+  main bundle
+- Only initialize the WebGL context when the component is in the
+  viewport (Intersection Observer)
+- Dispose all Three.js geometries, materials, and the renderer
+  on component unmount to prevent memory leaks

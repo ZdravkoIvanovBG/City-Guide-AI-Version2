@@ -146,6 +146,8 @@ router.get("/profile/stats", requireAuth, async (req: AuthRequest, res): Promise
       country: plansTable.country,
       startDate: plansTable.startDate,
       endDate: plansTable.endDate,
+      lat: plansTable.lat,
+      lng: plansTable.lng,
     })
     .from(plansTable)
     .where(eq(plansTable.userId, req.userId!))
@@ -176,12 +178,12 @@ router.get("/profile/stats", requireAuth, async (req: AuthRequest, res): Promise
 
   const visitedCities = [...cities].map((city) => {
     const plan = plans.find((p) => p.city === city);
-    const coords = CITY_COORDS[city] ?? { lat: 0, lng: 0 };
+    const fallback = CITY_COORDS[city] ?? { lat: 0, lng: 0 };
     return {
       city,
       country: plan?.country ?? "",
-      lat: coords.lat,
-      lng: coords.lng,
+      lat: plan?.lat ?? fallback.lat,
+      lng: plan?.lng ?? fallback.lng,
     };
   });
 

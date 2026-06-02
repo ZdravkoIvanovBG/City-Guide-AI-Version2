@@ -72,12 +72,11 @@ export default function PlanBuilder() {
 
   // Simulate progress bar during generation
   useEffect(() => {
-    if (showLoader && generateMutation.isPending) {
-      const interval = setInterval(() => {
-        setProgress(p => Math.min(p + (90 - p) * 0.05, 90));
-      }, 100);
-      return () => clearInterval(interval);
-    }
+    if (!showLoader || !generateMutation.isPending) return;
+    const interval = setInterval(() => {
+      setProgress(p => Math.min(p + (90 - p) * 0.05, 90));
+    }, 100);
+    return () => clearInterval(interval);
   }, [showLoader, generateMutation.isPending]);
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {

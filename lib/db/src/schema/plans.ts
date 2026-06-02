@@ -1,4 +1,4 @@
-import { pgTable, serial, text, timestamp, jsonb, integer } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, timestamp, jsonb, integer, real } from "drizzle-orm/pg-core";
 import { usersTable } from "./users";
 
 export const plansTable = pgTable("plans", {
@@ -9,6 +9,8 @@ export const plansTable = pgTable("plans", {
   }),
   city: text("city").notNull(),
   country: text("country").notNull(),
+  lat: real("lat"),
+  lng: real("lng"),
   startDate: text("start_date").notNull(),
   endDate: text("end_date").notNull(),
   budget: text("budget"),

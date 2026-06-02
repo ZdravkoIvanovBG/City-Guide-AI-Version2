@@ -58,6 +58,8 @@ Order by most likely travel destination first. Return ONLY the JSON array, no ma
 
 interface PlanData {
   city: string;
+  lat: number;
+  lng: number;
   tripSummary: string;
   days: Array<{
     dayNumber: number;
@@ -134,6 +136,8 @@ Return ONLY valid JSON (no markdown, no preamble, no code blocks) matching this 
 
 {
   "city": "${city}",
+  "lat": <decimal latitude of ${city}>,
+  "lng": <decimal longitude of ${city}>,
   "tripSummary": "2-3 sentence evocative summary of this trip",
   "days": [
     {

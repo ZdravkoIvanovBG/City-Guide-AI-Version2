@@ -158,6 +158,8 @@ router.post("/plans", optionalAuth, async (req: AuthRequest, res): Promise<void>
         userId: req.userId ?? null,
         city,
         country,
+        lat: typeof planData.lat === "number" ? planData.lat : null,
+        lng: typeof planData.lng === "number" ? planData.lng : null,
         startDate,
         endDate,
         budget: budget ?? null,

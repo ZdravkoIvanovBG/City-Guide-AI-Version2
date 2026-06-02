@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
-import { useGetCityAutocomplete, CityOption } from "@workspace/api-client-react";
+import { useGetCityAutocomplete, getGetCityAutocompleteQueryKey, CityOption } from "@workspace/api-client-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, MapPin } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -21,7 +21,7 @@ export function CitySearch() {
 
   const { data: suggestions, isLoading } = useGetCityAutocomplete(
     { q: debouncedQuery },
-    { query: { enabled: debouncedQuery.length > 1 } }
+    { query: { enabled: debouncedQuery.length > 1, queryKey: getGetCityAutocompleteQueryKey({ q: debouncedQuery }) } }
   );
 
   useEffect(() => {

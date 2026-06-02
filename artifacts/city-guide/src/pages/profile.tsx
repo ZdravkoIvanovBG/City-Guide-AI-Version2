@@ -1,5 +1,6 @@
+import { lazy, Suspense } from "react";
 import { useLocation } from "wouter";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/lib/auth";
 import { Navbar } from "@/components/layout/navbar";
 import { PlanCard } from "@/components/plan-card";
@@ -12,6 +13,10 @@ import {
   getGetPlansQueryKey
 } from "@workspace/api-client-react";
 import { Globe, Map, Calendar, Navigation } from "lucide-react";
+
+const TravelGlobe = lazy(() =>
+  import("@/components/travel-globe").then((m) => ({ default: m.TravelGlobe }))
+);
 
 export default function Profile() {
   const [, setLocation] = useLocation();
@@ -53,10 +58,11 @@ export default function Profile() {
   }
 
   if (!isAuthenticated || !profile) {
-    // Should be handled by protected route wrapper, but just in case
-    setLocation("/login");
+    if (!authLoading) setLocation("/login");
     return null;
   }
+
+  const visitedCities = stats?.visitedCities ?? [];
 
   return (
     <motion.div 
@@ -91,6 +97,29 @@ export default function Profile() {
             </div>
           </div>
 
+          {/* Globe Section */}
+          {visitedCities.length > 0 && (
+            <div className="mb-16">
+              <div className="flex items-end justify-between mb-6">
+                <h2 className="font-serif text-4xl">Your World</h2>
+                <p className="text-xs uppercase tracking-widest text-muted-foreground">
+                  {stats?.totalCountries ?? 0} {(stats?.totalCountries ?? 0) === 1 ? "country" : "countries"} explored
+                </p>
+              </div>
+              <div className="bg-card border border-border overflow-hidden">
+                <Suspense
+                  fallback={
+                    <div className="h-[420px] bg-muted animate-pulse flex items-center justify-center">
+                      <Globe className="w-10 h-10 text-muted-foreground/30 animate-spin" style={{ animationDuration: "3s" }} />
+                    </div>
+                  }
+                >
+                  <TravelGlobe visitedCities={visitedCities} />
+                </Suspense>
+              </div>
+            </div>
+          )}
+
           {/* Stats Section */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-24">
             <div className="bg-card border border-border p-8 text-center group hover:border-primary/50 transition-colors">
@@ -124,11 +153,16 @@ export default function Profile() {
             </div>
             
             {plans && plans.length > 0 ? (
-              <div className="flex overflow-x-auto gap-6 pb-8 snap-x snap-mandatory hide-scrollbar">
-                {plans.map((plan, idx) => (
-                  <PlanCard key={plan.id} plan={plan} index={idx} />
-                ))}
-              </div>
+              <motion.div
+                layout
+                className="flex overflow-x-auto gap-6 pb-8 snap-x snap-mandatory hide-scrollbar"
+              >
+                <AnimatePresence mode="popLayout">
+                  {plans.map((plan, idx) => (
+                    <PlanCard key={plan.id} plan={plan} index={idx} />
+                  ))}
+                </AnimatePresence>
+              </motion.div>
             ) : (
               <div className="bg-card border border-border p-12 text-center">
                 <Map className="w-12 h-12 text-muted-foreground/50 mx-auto mb-4" />
