@@ -363,7 +363,7 @@ export default function PlanView() {
                   value={tab}
                   className="font-serif text-xl md:text-2xl data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none border-b-2 border-transparent data-[state=active]:border-primary rounded-none pb-2 px-0 capitalize"
                 >
-                  {tab === "misc" ? "Good to Know" : tab === "restaurants" ? "Dining" : tab.charAt(0).toUpperCase() + tab.slice(1)}
+                  {tab === "misc" ? "Bonus Activities" : tab === "restaurants" ? "Dining" : tab.charAt(0).toUpperCase() + tab.slice(1)}
                 </TabsTrigger>
               ))}
             </TabsList>
