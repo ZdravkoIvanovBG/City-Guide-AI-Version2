@@ -1,0 +1,2 @@
+- [Orval codegen conflict fix](orval-codegen-conflict.md) — removing `schemas` from zod orval config and dropping `./generated/types` re-export stops duplicate-name TS errors.
+- [Plan editing architecture](plan-editing.md) — all 7 plan-edit endpoints pattern, ownership guard, and frontend isOwner detection approach.

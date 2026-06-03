@@ -116,6 +116,7 @@ export default function Profile() {
   const [formBio, setFormBio] = useState("");
   const [formHomeCity, setFormHomeCity] = useState("");
   const [formHomeCountry, setFormHomeCountry] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string | null>(null);
   
   const { data: profile, isLoading: profileLoading } = useGetProfile({
     query: {
@@ -353,9 +354,25 @@ export default function Profile() {
 
           {/* Itineraries Filmstrip */}
           <div>
-            <div className="flex items-end justify-between mb-8">
+            <div className="flex items-end justify-between mb-6">
               <h2 className="font-serif text-4xl">Your Itineraries</h2>
             </div>
+
+            {/* Status filter */}
+            {plans && plans.length > 0 && (() => {
+              const statuses = Array.from(new Set((plans ?? []).map(p => p.status ?? "planning")));
+              const STATUS_LABELS: Record<string, string> = { planning: "Planning", booked: "Booked", ongoing: "Ongoing", completed: "Completed", wishlist: "Wishlist" };
+              return (
+                <div className="flex gap-3 mb-6 flex-wrap">
+                  <button onClick={() => setStatusFilter(null)} className={`text-xs font-medium uppercase tracking-widest px-3 py-1.5 border transition-colors ${!statusFilter ? "border-primary text-primary bg-primary/10" : "border-border text-muted-foreground hover:text-foreground"}`}>All</button>
+                  {statuses.map(s => (
+                    <button key={s} onClick={() => setStatusFilter(s)} className={`text-xs font-medium uppercase tracking-widest px-3 py-1.5 border transition-colors ${statusFilter === s ? "border-primary text-primary bg-primary/10" : "border-border text-muted-foreground hover:text-foreground"}`}>
+                      {STATUS_LABELS[s] ?? s}
+                    </button>
+                  ))}
+                </div>
+              );
+            })()}
             
             {plans && plans.length > 0 ? (
               <motion.div
@@ -363,7 +380,7 @@ export default function Profile() {
                 className="flex overflow-x-auto gap-6 pb-8 snap-x snap-mandatory hide-scrollbar"
               >
                 <AnimatePresence mode="popLayout">
-                  {plans.map((plan, idx) => (
+                  {(plans ?? []).filter(p => !statusFilter || (p.status ?? "planning") === statusFilter).map((plan, idx) => (
                     <PlanCard key={plan.id} plan={plan} index={idx} />
                   ))}
                 </AnimatePresence>

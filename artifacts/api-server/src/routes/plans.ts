@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { eq, and, desc } from "drizzle-orm";
 import crypto from "crypto";
-import { db, plansTable } from "@workspace/db";
+import { db, plansTable, destinationNotesTable } from "@workspace/db";
 import { generateTravelPlan } from "../lib/gemini";
 import { getPlacePhoto } from "../lib/placePhoto";
 import {
@@ -82,6 +82,8 @@ router.get("/plans", requireAuth, async (req: AuthRequest, res): Promise<void> =
       budget: p.budget ?? null,
       createdAt: p.createdAt.toISOString(),
       photoUrl: p.photoUrl,
+      customName: p.customName ?? null,
+      status: p.status ?? "planning",
     }))
   );
 });
@@ -282,6 +284,122 @@ router.post("/plans/:id/regenerate", requireAuth, async (req: AuthRequest, res):
   }
 });
 
+// ── Edit endpoints ────────────────────────────────────────────────────────────
+
+function parsePlanId(req: AuthRequest, res: Parameters<Parameters<typeof router.patch>[1]>[1]): number | null {
+  const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const id = parseInt(raw ?? "0", 10);
+  if (!id || isNaN(id)) { res.status(400).json({ error: "Invalid plan ID" }); return null; }
+  return id;
+}
+
+async function requirePlanOwner(planId: number, userId: number, res: Parameters<Parameters<typeof router.patch>[1]>[1]): Promise<typeof plansTable.$inferSelect | null> {
+  const [plan] = await db.select().from(plansTable).where(and(eq(plansTable.id, planId), eq(plansTable.userId, userId))).limit(1);
+  if (!plan) { res.status(404).json({ error: "Plan not found" }); return null; }
+  return plan;
+}
+
+router.patch("/plans/:id/rename", requireAuth, async (req: AuthRequest, res): Promise<void> => {
+  const planId = parsePlanId(req, res); if (!planId) return;
+  const plan = await requirePlanOwner(planId, req.userId!, res); if (!plan) return;
+  const { customName } = req.body as { customName?: string | null };
+  const name = typeof customName === "string" && customName.trim() ? customName.trim().slice(0, 60) : null;
+  const [updated] = await db.update(plansTable).set({ customName: name ?? undefined }).where(eq(plansTable.id, planId)).returning();
+  res.json(formatPlan(updated));
+});
+
+router.patch("/plans/:id/notes", requireAuth, async (req: AuthRequest, res): Promise<void> => {
+  const planId = parsePlanId(req, res); if (!planId) return;
+  const plan = await requirePlanOwner(planId, req.userId!, res); if (!plan) return;
+  const { tripNotes } = req.body as { tripNotes?: string | null };
+  const [updated] = await db.update(plansTable).set({ tripNotes: tripNotes ?? null }).where(eq(plansTable.id, planId)).returning();
+  res.json(formatPlan(updated));
+});
+
+router.patch("/plans/:id/status", requireAuth, async (req: AuthRequest, res): Promise<void> => {
+  const planId = parsePlanId(req, res); if (!planId) return;
+  const plan = await requirePlanOwner(planId, req.userId!, res); if (!plan) return;
+  const { status } = req.body as { status?: string };
+  const valid = ["planning", "booked", "ongoing", "completed", "wishlist"];
+  const s = typeof status === "string" && valid.includes(status) ? status : "planning";
+  const [updated] = await db.update(plansTable).set({ status: s }).where(eq(plansTable.id, planId)).returning();
+  res.json(formatPlan(updated));
+});
+
+router.patch("/plans/:id/reorder-days", requireAuth, async (req: AuthRequest, res): Promise<void> => {
+  const planId = parsePlanId(req, res); if (!planId) return;
+  const plan = await requirePlanOwner(planId, req.userId!, res); if (!plan) return;
+  const { dayOrder } = req.body as { dayOrder?: number[] };
+  if (!Array.isArray(dayOrder)) { res.status(400).json({ error: "dayOrder must be an array" }); return; }
+  const [updated] = await db.update(plansTable).set({ dayOrder }).where(eq(plansTable.id, planId)).returning();
+  res.json(formatPlan(updated));
+});
+
+router.patch("/plans/:id/reorder-destinations", requireAuth, async (req: AuthRequest, res): Promise<void> => {
+  const planId = parsePlanId(req, res); if (!planId) return;
+  const plan = await requirePlanOwner(planId, req.userId!, res); if (!plan) return;
+  const { dayIndex, destOrder } = req.body as { dayIndex?: number; destOrder?: number[] };
+  if (typeof dayIndex !== "number" || !Array.isArray(destOrder)) { res.status(400).json({ error: "Invalid body" }); return; }
+  const data = plan.planData as Record<string, unknown>;
+  const days = [...((data.days ?? []) as Record<string, unknown>[])];
+  if (!days[dayIndex]) { res.status(400).json({ error: "Invalid dayIndex" }); return; }
+  const origDests = (days[dayIndex].destinations ?? []) as unknown[];
+  const reordered = destOrder.map(i => origDests[i]).filter(Boolean);
+  days[dayIndex] = { ...days[dayIndex], destinations: reordered };
+  const [updated] = await db.update(plansTable).set({ planData: { ...data, days } }).where(eq(plansTable.id, planId)).returning();
+  res.json(formatPlan(updated));
+});
+
+router.patch("/plans/:id/remove-destination", requireAuth, async (req: AuthRequest, res): Promise<void> => {
+  const planId = parsePlanId(req, res); if (!planId) return;
+  const plan = await requirePlanOwner(planId, req.userId!, res); if (!plan) return;
+  const { dayIndex, destIndex } = req.body as { dayIndex?: number; destIndex?: number };
+  if (typeof dayIndex !== "number" || typeof destIndex !== "number") { res.status(400).json({ error: "Invalid body" }); return; }
+  const data = plan.planData as Record<string, unknown>;
+  const days = [...((data.days ?? []) as Record<string, unknown>[])];
+  if (!days[dayIndex]) { res.status(400).json({ error: "Invalid dayIndex" }); return; }
+  const dests = [...((days[dayIndex].destinations ?? []) as unknown[])];
+  dests.splice(destIndex, 1);
+  days[dayIndex] = { ...days[dayIndex], destinations: dests };
+  const [updated] = await db.update(plansTable).set({ planData: { ...data, days } }).where(eq(plansTable.id, planId)).returning();
+  res.json(formatPlan(updated));
+});
+
+router.get("/plans/:id/destination-notes", requireAuth, async (req: AuthRequest, res): Promise<void> => {
+  const planId = parsePlanId(req, res); if (!planId) return;
+  await requirePlanOwner(planId, req.userId!, res);
+  const notes = await db.select().from(destinationNotesTable).where(eq(destinationNotesTable.planId, planId));
+  res.json(notes.map(n => ({ planId: n.planId, dayIndex: n.dayIndex, destIndex: n.destIndex, note: n.note, updatedAt: n.updatedAt.toISOString() })));
+});
+
+router.get("/plans/:id/destination-notes/:dayIndex/:destIndex", requireAuth, async (req: AuthRequest, res): Promise<void> => {
+  const planId = parsePlanId(req, res); if (!planId) return;
+  await requirePlanOwner(planId, req.userId!, res);
+  const dayParam = Array.isArray(req.params.dayIndex) ? req.params.dayIndex[0] : req.params.dayIndex;
+  const destParam = Array.isArray(req.params.destIndex) ? req.params.destIndex[0] : req.params.destIndex;
+  const di = parseInt(dayParam ?? "0", 10);
+  const xi = parseInt(destParam ?? "0", 10);
+  const [note] = await db.select().from(destinationNotesTable).where(and(eq(destinationNotesTable.planId, planId), eq(destinationNotesTable.dayIndex, di), eq(destinationNotesTable.destIndex, xi))).limit(1);
+  res.json({ planId, dayIndex: di, destIndex: xi, note: note?.note ?? "", updatedAt: note?.updatedAt.toISOString() ?? new Date().toISOString() });
+});
+
+router.patch("/plans/:id/destination-notes/:dayIndex/:destIndex", requireAuth, async (req: AuthRequest, res): Promise<void> => {
+  const planId = parsePlanId(req, res); if (!planId) return;
+  await requirePlanOwner(planId, req.userId!, res);
+  const dayParam2 = Array.isArray(req.params.dayIndex) ? req.params.dayIndex[0] : req.params.dayIndex;
+  const destParam2 = Array.isArray(req.params.destIndex) ? req.params.destIndex[0] : req.params.destIndex;
+  const di = parseInt(dayParam2 ?? "0", 10);
+  const xi = parseInt(destParam2 ?? "0", 10);
+  const { note } = req.body as { note?: string };
+  if (typeof note !== "string") { res.status(400).json({ error: "note must be a string" }); return; }
+  const [saved] = await db.insert(destinationNotesTable).values({ planId, dayIndex: di, destIndex: xi, note, updatedAt: new Date() })
+    .onConflictDoUpdate({ target: [destinationNotesTable.planId, destinationNotesTable.dayIndex, destinationNotesTable.destIndex], set: { note, updatedAt: new Date() } })
+    .returning();
+  res.json({ planId: saved.planId, dayIndex: saved.dayIndex, destIndex: saved.destIndex, note: saved.note, updatedAt: saved.updatedAt.toISOString() });
+});
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
 function formatPlan(plan: typeof plansTable.$inferSelect) {
   const data = plan.planData as Record<string, unknown>;
   return {
@@ -298,6 +416,10 @@ function formatPlan(plan: typeof plansTable.$inferSelect) {
     tripSummary: plan.tripSummary,
     photoUrl: plan.photoUrl,
     createdAt: plan.createdAt.toISOString(),
+    customName: plan.customName ?? null,
+    tripNotes: plan.tripNotes ?? null,
+    dayOrder: (plan.dayOrder as number[] | null) ?? null,
+    status: plan.status ?? "planning",
     days: (data.days ?? []) as unknown[],
     hotels: (data.hotels ?? { budget: [], midRange: [], luxury: [] }) as unknown,
     restaurants: (data.restaurants ?? []) as unknown[],

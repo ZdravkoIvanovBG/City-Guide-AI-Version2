@@ -1,0 +1,212 @@
+Add plan editing capabilities to saved plans. Currently plans are
+completely static after generation. This prompt adds three things:
+renaming plans, adding personal notes, and reordering days. Plus
+several smaller quality-of-life editing features.
+
+---
+
+## 1. Plan rename
+
+### Where it appears
+Every place a plan name is shown:
+- The plan page header at the top
+- Saved plan cards on the profile filmstrip
+- The browser tab title
+- The shared plan public page
+
+### How it works
+- The plan name displayed in the plan page header is an editable
+  field. By default it shows the auto-generated name
+  e.g. "Tokyo · Jun 3–7"
+- Clicking the name switches it to an inline text input, same
+  font and size as the heading (Cormorant Garamond) so it feels
+  seamless — not a separate form field appearing
+- The input has a soft amber underline to signal it is editable
+- User types their custom name e.g. "Tokyo Honeymoon 2025"
+- Pressing Enter or clicking outside saves it
+- Pressing Escape cancels and reverts to the previous name
+- A small pencil icon sits next to the name at all times —
+  on desktop it only appears on hover, on mobile it is always
+  visible
+- Saved instantly via PATCH /api/plans/:id/rename to the database
+- Show a subtle inline confirmation: the name briefly flashes
+  amber then settles — no toast needed for this, it is too
+  frequent an action
+- Max 60 characters, show a character counter when the user is
+  within 10 characters of the limit
+- Empty name not allowed — revert to previous name if the user
+  clears the field and saves
+
+---
+
+## 2. Trip notes
+
+A personal notes field for the whole trip, separate from
+destination-level notes.
+
+### Where it appears
+- A "Trip Notes" section on the plan page, placed between the
+  pill tab nav and the tab content
+- Collapsed by default with a subtle "Add trip notes..." prompt
+  in muted text
+- Expanding it reveals a full textarea
+
+### How it works
+- Clicking "Add trip notes..." or an expand chevron opens the
+  notes area with a smooth Framer Motion height animation
+- Textarea is auto-resizing (grows with content, never scrolls
+  internally)
+- Placeholder text: "Jot down anything — reminders, ideas,
+  things to look up, notes from friends..."
+- Supports basic markdown: **bold**, *italic*, - bullet lists.
+  Show a live preview toggle next to the textarea so the user
+  can switch between edit and rendered preview
+- Auto-saves to the database 1.5 seconds after the user stops
+  typing (debounced) via PATCH /api/plans/:id/notes
+- Show a small "Saved" indicator that fades in and out when
+  auto-save fires
+- Show "Saving..." while the request is in flight
+- Notes are included in the PDF export
+- Notes are NOT shown on the public shared plan page — these
+  are private always, regardless of plan visibility setting
+
+### Also add per-destination notes
+On each destination card in the Itinerary tab, add a small
+"Add a note" button at the bottom of the card. Clicking it
+opens a compact inline textarea below the card content:
+- Placeholder: "Your thoughts on this place..."
+- Same auto-save behavior as trip notes
+- Saved to the UserDestinationNote table keyed by planId +
+  destinationIndex
+- On mobile: tapping outside the textarea closes and saves it
+- Show a small note icon on the destination card header if a
+  note exists, so the user can see at a glance which
+  destinations have notes without expanding them
+
+---
+
+## 3. Day reordering
+
+Let users drag and drop entire days to reorder them within
+the itinerary.
+
+### How it works
+- In the Itinerary tab, each day section has a drag handle
+  on the left side of the day header (six dots icon, like a
+  typical drag handle)
+- On desktop: click and drag the handle to reorder days
+- On mobile: long press the handle to enter drag mode, then
+  drag to reorder
+- Use @dnd-kit/core and @dnd-kit/sortable for this —
+  consistent with the tier list drag and drop already in
+  the app
+- While dragging a day, it lifts with a subtle shadow and
+  slight scale increase (1.02) — other days compress slightly
+  to show where it will drop
+- The day number labels (Day 1, Day 2...) update automatically
+  after reordering to reflect the new order — the dates stay
+  fixed to their original calendar dates, only the day numbers
+  change
+- Reordered layout saved to the database via
+  PATCH /api/plans/:id/reorder-days with the new day order
+  as an array of day IDs
+- A subtle "Reorder days" label appears above the first day
+  header in the Itinerary tab with a small drag icon — acts
+  as a hint for first-time users and disappears after the
+  user has reordered once (track in localStorage)
+
+### Also add destination reordering within a day
+Within each day, the up to 3 destinations can also be
+reordered:
+- Small up/down arrow buttons on each destination card
+  (simpler than drag for destinations since there are only
+  3 max)
+- Tapping up moves the destination one position up within
+  the day, tapping down moves it one position down
+- First destination has no up arrow, last has no down arrow
+- Saved via PATCH /api/plans/:id/reorder-destinations with
+  dayId and new destination order
+
+---
+
+## 4. Destination management
+
+### Remove a destination
+- A small remove button (X icon) on each destination card,
+  visible on hover on desktop, always visible on mobile
+- Clicking shows a small inline confirmation below the card:
+  "Remove [destination name] from Day 1? This cannot be undone."
+  with Confirm and Cancel buttons — no modal, keep it in context
+- On confirm: card animates out with Framer Motion exit
+  animation, remaining cards in the day reflow smoothly
+- Saved via PATCH /api/plans/:id/remove-destination
+- If removing a destination leaves a day with 0 destinations,
+  show an empty state on that day: "No destinations for this
+  day — add one below" with an add button
+
+### Add a destination to a day
+- Below the destination cards for each day, show an
+  "+ Add destination" button
+- Clicking it opens a compact inline form:
+  - A text input: "Search for a place in [city]..."
+  - This calls Gemini: "Suggest a destination in [city] that
+    fits well with these existing stops for the day:
+    [existing destination names]. Return a single destination
+    object in the same JSON format as the existing destinations
+    including name, category, summary, insiderTips, entryCost,
+    howToGetThere, bestTimeToVisit, photoSearchQuery."
+  - Or the user can type a specific place name and hit Add
+    to add it directly
+  - The new destination card appears with a subtle fade-in
+    and a "New" badge that disappears after 3 seconds
+- Maximum 3 destinations per day still enforced — hide the
+  "+ Add destination" button when a day already has 3
+
+---
+
+## 5. Plan status tags
+
+Let users tag a plan with a status. Shown as a colored badge
+next to the plan name on the plan page and on profile cards.
+
+Statuses:
+- "Planning" (default, blue) — still figuring it out
+- "Booked" (amber) — flights and hotels confirmed
+- "Ongoing" (green, pulsing dot) — currently on this trip
+- "Completed" (muted green) — trip is done
+- "Wishlist" (purple) — want to do this someday
+
+### How it works
+- A small badge next to the plan name — clicking it opens
+  a tiny dropdown with the 5 status options
+- Selected status shown with a colored dot + label
+- Saved via PATCH /api/plans/:id/status
+- On the profile page, the filmstrip plan cards show the
+  status badge in their top-right corner
+- Filter bar on the profile page lets the user filter saved
+  plans by status: All | Planning | Booked | Ongoing |
+  Completed | Wishlist
+
+## Database changes needed
+
+- Plans table: add columns for customName, tripNotes, dayOrder
+  (JSON array), destinationOrder (JSON), status
+- New table: DestinationNotes (planId, destinationIndex, note,
+  updatedAt)
+- All PATCH endpoints must verify the plan belongs to the
+  requesting user before making any changes
+
+---
+
+## General rules for all editing features
+
+- Every edit is optimistic UI — update the interface immediately
+  and save in the background. If the save fails, revert the
+  change and show a toast error: "Couldn't save — please try again"
+- Never show a full loading spinner for any edit action — these
+  must feel instant
+- All editing features are only available to the plan owner —
+  the public shared view is always read-only with no edit
+  controls visible
+- Edit history is not needed — last write wins is fine for
+  a personal project

@@ -100,7 +100,9 @@ export const GetPlansResponseItem = zod.object({
   "travellerType": zod.string().optional(),
   "budget": zod.string().nullish(),
   "createdAt": zod.string(),
-  "photoUrl": zod.string()
+  "photoUrl": zod.string(),
+  "customName": zod.string().nullish(),
+  "status": zod.string().nullish()
 })
 export const GetPlansResponse = zod.array(GetPlansResponseItem)
 
@@ -141,6 +143,10 @@ export const GetPlanResponse = zod.object({
   "tripSummary": zod.string(),
   "photoUrl": zod.string(),
   "createdAt": zod.string(),
+  "customName": zod.string().nullish(),
+  "tripNotes": zod.string().nullish(),
+  "dayOrder": zod.array(zod.number()).nullish(),
+  "status": zod.string().nullish(),
   "days": zod.array(zod.object({
   "dayNumber": zod.number(),
   "date": zod.string(),
@@ -278,6 +284,1007 @@ export const DeletePlanParams = zod.object({
 
 
 /**
+ * @summary Set a custom name for a plan
+ */
+export const RenamePlanParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const RenamePlanBody = zod.object({
+  "customName": zod.string().nullable()
+})
+
+export const RenamePlanResponse = zod.object({
+  "id": zod.number(),
+  "shareCode": zod.string(),
+  "city": zod.string(),
+  "country": zod.string(),
+  "countryCode": zod.string(),
+  "startDate": zod.string(),
+  "endDate": zod.string(),
+  "travellerType": zod.string(),
+  "budget": zod.string().nullish(),
+  "preferences": zod.string().nullish(),
+  "tripSummary": zod.string(),
+  "photoUrl": zod.string(),
+  "createdAt": zod.string(),
+  "customName": zod.string().nullish(),
+  "tripNotes": zod.string().nullish(),
+  "dayOrder": zod.array(zod.number()).nullish(),
+  "status": zod.string().nullish(),
+  "days": zod.array(zod.object({
+  "dayNumber": zod.number(),
+  "date": zod.string(),
+  "destinations": zod.array(zod.object({
+  "name": zod.string(),
+  "category": zod.string(),
+  "summary": zod.string(),
+  "insiderTips": zod.array(zod.string()),
+  "entryCost": zod.string(),
+  "howToGetThere": zod.record(zod.string(), zod.object({
+  "available": zod.boolean(),
+  "duration": zod.string().optional(),
+  "from": zod.string().optional(),
+  "line": zod.string().optional(),
+  "stop": zod.string().optional(),
+  "cost": zod.string().optional(),
+  "instructions": zod.string().optional()
+})).optional(),
+  "bestTimeToVisit": zod.string(),
+  "photoUrl": zod.string()
+}))
+})),
+  "hotels": zod.object({
+  "budget": zod.array(zod.object({
+  "name": zod.string(),
+  "neighbourhood": zod.string(),
+  "description": zod.string(),
+  "priceRange": zod.string(),
+  "type": zod.string(),
+  "photoUrl": zod.string().nullish(),
+  "mapsUrl": zod.string().nullish(),
+  "bookingUrl": zod.string().nullish(),
+  "airbnbUrl": zod.string().nullish()
+})),
+  "midRange": zod.array(zod.object({
+  "name": zod.string(),
+  "neighbourhood": zod.string(),
+  "description": zod.string(),
+  "priceRange": zod.string(),
+  "type": zod.string(),
+  "photoUrl": zod.string().nullish(),
+  "mapsUrl": zod.string().nullish(),
+  "bookingUrl": zod.string().nullish(),
+  "airbnbUrl": zod.string().nullish()
+})),
+  "luxury": zod.array(zod.object({
+  "name": zod.string(),
+  "neighbourhood": zod.string(),
+  "description": zod.string(),
+  "priceRange": zod.string(),
+  "type": zod.string(),
+  "photoUrl": zod.string().nullish(),
+  "mapsUrl": zod.string().nullish(),
+  "bookingUrl": zod.string().nullish(),
+  "airbnbUrl": zod.string().nullish()
+}))
+}),
+  "restaurants": zod.array(zod.object({
+  "name": zod.string(),
+  "cuisine": zod.string(),
+  "mustTryDish": zod.string(),
+  "neighbourhood": zod.string(),
+  "priceRange": zod.string(),
+  "description": zod.string(),
+  "photoUrl": zod.string().nullish(),
+  "mapsUrl": zod.string().nullish()
+})),
+  "misc": zod.array(zod.object({
+  "name": zod.string(),
+  "dateOrFrequency": zod.string(),
+  "description": zod.string(),
+  "location": zod.string(),
+  "isFree": zod.boolean()
+})),
+  "packingList": zod.object({
+  "categories": zod.array(zod.object({
+  "name": zod.string(),
+  "items": zod.array(zod.object({
+  "label": zod.string(),
+  "essential": zod.boolean(),
+  "note": zod.string().nullish()
+}))
+}))
+}).optional(),
+  "budgetEstimate": zod.object({
+  "currency": zod.string(),
+  "currencySymbol": zod.string(),
+  "budgetTier": zod.string(),
+  "dailyBreakdown": zod.array(zod.object({
+  "day": zod.number(),
+  "date": zod.string(),
+  "items": zod.array(zod.object({
+  "category": zod.string(),
+  "description": zod.string(),
+  "estimatedCost": zod.number(),
+  "notes": zod.string().nullish()
+})),
+  "dayTotal": zod.number()
+})),
+  "fixedCosts": zod.array(zod.object({
+  "category": zod.string(),
+  "description": zod.string(),
+  "estimatedCostPerNight": zod.number(),
+  "totalEstimated": zod.number(),
+  "notes": zod.string().nullish()
+})),
+  "tripTotal": zod.object({
+  "low": zod.number(),
+  "mid": zod.number(),
+  "high": zod.number()
+}),
+  "localTips": zod.array(zod.string())
+}).optional(),
+  "tripChecklist": zod.object({
+  "categories": zod.array(zod.object({
+  "name": zod.string(),
+  "items": zod.array(zod.object({
+  "label": zod.string(),
+  "essential": zod.boolean(),
+  "link": zod.string().nullish(),
+  "linkLabel": zod.string().nullish(),
+  "detail": zod.string().nullish()
+}))
+}))
+}).optional()
+})
+
+
+/**
+ * @summary Update trip notes for a plan
+ */
+export const UpdatePlanNotesParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdatePlanNotesBody = zod.object({
+  "tripNotes": zod.string().nullable()
+})
+
+export const UpdatePlanNotesResponse = zod.object({
+  "id": zod.number(),
+  "shareCode": zod.string(),
+  "city": zod.string(),
+  "country": zod.string(),
+  "countryCode": zod.string(),
+  "startDate": zod.string(),
+  "endDate": zod.string(),
+  "travellerType": zod.string(),
+  "budget": zod.string().nullish(),
+  "preferences": zod.string().nullish(),
+  "tripSummary": zod.string(),
+  "photoUrl": zod.string(),
+  "createdAt": zod.string(),
+  "customName": zod.string().nullish(),
+  "tripNotes": zod.string().nullish(),
+  "dayOrder": zod.array(zod.number()).nullish(),
+  "status": zod.string().nullish(),
+  "days": zod.array(zod.object({
+  "dayNumber": zod.number(),
+  "date": zod.string(),
+  "destinations": zod.array(zod.object({
+  "name": zod.string(),
+  "category": zod.string(),
+  "summary": zod.string(),
+  "insiderTips": zod.array(zod.string()),
+  "entryCost": zod.string(),
+  "howToGetThere": zod.record(zod.string(), zod.object({
+  "available": zod.boolean(),
+  "duration": zod.string().optional(),
+  "from": zod.string().optional(),
+  "line": zod.string().optional(),
+  "stop": zod.string().optional(),
+  "cost": zod.string().optional(),
+  "instructions": zod.string().optional()
+})).optional(),
+  "bestTimeToVisit": zod.string(),
+  "photoUrl": zod.string()
+}))
+})),
+  "hotels": zod.object({
+  "budget": zod.array(zod.object({
+  "name": zod.string(),
+  "neighbourhood": zod.string(),
+  "description": zod.string(),
+  "priceRange": zod.string(),
+  "type": zod.string(),
+  "photoUrl": zod.string().nullish(),
+  "mapsUrl": zod.string().nullish(),
+  "bookingUrl": zod.string().nullish(),
+  "airbnbUrl": zod.string().nullish()
+})),
+  "midRange": zod.array(zod.object({
+  "name": zod.string(),
+  "neighbourhood": zod.string(),
+  "description": zod.string(),
+  "priceRange": zod.string(),
+  "type": zod.string(),
+  "photoUrl": zod.string().nullish(),
+  "mapsUrl": zod.string().nullish(),
+  "bookingUrl": zod.string().nullish(),
+  "airbnbUrl": zod.string().nullish()
+})),
+  "luxury": zod.array(zod.object({
+  "name": zod.string(),
+  "neighbourhood": zod.string(),
+  "description": zod.string(),
+  "priceRange": zod.string(),
+  "type": zod.string(),
+  "photoUrl": zod.string().nullish(),
+  "mapsUrl": zod.string().nullish(),
+  "bookingUrl": zod.string().nullish(),
+  "airbnbUrl": zod.string().nullish()
+}))
+}),
+  "restaurants": zod.array(zod.object({
+  "name": zod.string(),
+  "cuisine": zod.string(),
+  "mustTryDish": zod.string(),
+  "neighbourhood": zod.string(),
+  "priceRange": zod.string(),
+  "description": zod.string(),
+  "photoUrl": zod.string().nullish(),
+  "mapsUrl": zod.string().nullish()
+})),
+  "misc": zod.array(zod.object({
+  "name": zod.string(),
+  "dateOrFrequency": zod.string(),
+  "description": zod.string(),
+  "location": zod.string(),
+  "isFree": zod.boolean()
+})),
+  "packingList": zod.object({
+  "categories": zod.array(zod.object({
+  "name": zod.string(),
+  "items": zod.array(zod.object({
+  "label": zod.string(),
+  "essential": zod.boolean(),
+  "note": zod.string().nullish()
+}))
+}))
+}).optional(),
+  "budgetEstimate": zod.object({
+  "currency": zod.string(),
+  "currencySymbol": zod.string(),
+  "budgetTier": zod.string(),
+  "dailyBreakdown": zod.array(zod.object({
+  "day": zod.number(),
+  "date": zod.string(),
+  "items": zod.array(zod.object({
+  "category": zod.string(),
+  "description": zod.string(),
+  "estimatedCost": zod.number(),
+  "notes": zod.string().nullish()
+})),
+  "dayTotal": zod.number()
+})),
+  "fixedCosts": zod.array(zod.object({
+  "category": zod.string(),
+  "description": zod.string(),
+  "estimatedCostPerNight": zod.number(),
+  "totalEstimated": zod.number(),
+  "notes": zod.string().nullish()
+})),
+  "tripTotal": zod.object({
+  "low": zod.number(),
+  "mid": zod.number(),
+  "high": zod.number()
+}),
+  "localTips": zod.array(zod.string())
+}).optional(),
+  "tripChecklist": zod.object({
+  "categories": zod.array(zod.object({
+  "name": zod.string(),
+  "items": zod.array(zod.object({
+  "label": zod.string(),
+  "essential": zod.boolean(),
+  "link": zod.string().nullish(),
+  "linkLabel": zod.string().nullish(),
+  "detail": zod.string().nullish()
+}))
+}))
+}).optional()
+})
+
+
+/**
+ * @summary Set status tag on a plan
+ */
+export const UpdatePlanStatusParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdatePlanStatusBody = zod.object({
+  "status": zod.string()
+})
+
+export const UpdatePlanStatusResponse = zod.object({
+  "id": zod.number(),
+  "shareCode": zod.string(),
+  "city": zod.string(),
+  "country": zod.string(),
+  "countryCode": zod.string(),
+  "startDate": zod.string(),
+  "endDate": zod.string(),
+  "travellerType": zod.string(),
+  "budget": zod.string().nullish(),
+  "preferences": zod.string().nullish(),
+  "tripSummary": zod.string(),
+  "photoUrl": zod.string(),
+  "createdAt": zod.string(),
+  "customName": zod.string().nullish(),
+  "tripNotes": zod.string().nullish(),
+  "dayOrder": zod.array(zod.number()).nullish(),
+  "status": zod.string().nullish(),
+  "days": zod.array(zod.object({
+  "dayNumber": zod.number(),
+  "date": zod.string(),
+  "destinations": zod.array(zod.object({
+  "name": zod.string(),
+  "category": zod.string(),
+  "summary": zod.string(),
+  "insiderTips": zod.array(zod.string()),
+  "entryCost": zod.string(),
+  "howToGetThere": zod.record(zod.string(), zod.object({
+  "available": zod.boolean(),
+  "duration": zod.string().optional(),
+  "from": zod.string().optional(),
+  "line": zod.string().optional(),
+  "stop": zod.string().optional(),
+  "cost": zod.string().optional(),
+  "instructions": zod.string().optional()
+})).optional(),
+  "bestTimeToVisit": zod.string(),
+  "photoUrl": zod.string()
+}))
+})),
+  "hotels": zod.object({
+  "budget": zod.array(zod.object({
+  "name": zod.string(),
+  "neighbourhood": zod.string(),
+  "description": zod.string(),
+  "priceRange": zod.string(),
+  "type": zod.string(),
+  "photoUrl": zod.string().nullish(),
+  "mapsUrl": zod.string().nullish(),
+  "bookingUrl": zod.string().nullish(),
+  "airbnbUrl": zod.string().nullish()
+})),
+  "midRange": zod.array(zod.object({
+  "name": zod.string(),
+  "neighbourhood": zod.string(),
+  "description": zod.string(),
+  "priceRange": zod.string(),
+  "type": zod.string(),
+  "photoUrl": zod.string().nullish(),
+  "mapsUrl": zod.string().nullish(),
+  "bookingUrl": zod.string().nullish(),
+  "airbnbUrl": zod.string().nullish()
+})),
+  "luxury": zod.array(zod.object({
+  "name": zod.string(),
+  "neighbourhood": zod.string(),
+  "description": zod.string(),
+  "priceRange": zod.string(),
+  "type": zod.string(),
+  "photoUrl": zod.string().nullish(),
+  "mapsUrl": zod.string().nullish(),
+  "bookingUrl": zod.string().nullish(),
+  "airbnbUrl": zod.string().nullish()
+}))
+}),
+  "restaurants": zod.array(zod.object({
+  "name": zod.string(),
+  "cuisine": zod.string(),
+  "mustTryDish": zod.string(),
+  "neighbourhood": zod.string(),
+  "priceRange": zod.string(),
+  "description": zod.string(),
+  "photoUrl": zod.string().nullish(),
+  "mapsUrl": zod.string().nullish()
+})),
+  "misc": zod.array(zod.object({
+  "name": zod.string(),
+  "dateOrFrequency": zod.string(),
+  "description": zod.string(),
+  "location": zod.string(),
+  "isFree": zod.boolean()
+})),
+  "packingList": zod.object({
+  "categories": zod.array(zod.object({
+  "name": zod.string(),
+  "items": zod.array(zod.object({
+  "label": zod.string(),
+  "essential": zod.boolean(),
+  "note": zod.string().nullish()
+}))
+}))
+}).optional(),
+  "budgetEstimate": zod.object({
+  "currency": zod.string(),
+  "currencySymbol": zod.string(),
+  "budgetTier": zod.string(),
+  "dailyBreakdown": zod.array(zod.object({
+  "day": zod.number(),
+  "date": zod.string(),
+  "items": zod.array(zod.object({
+  "category": zod.string(),
+  "description": zod.string(),
+  "estimatedCost": zod.number(),
+  "notes": zod.string().nullish()
+})),
+  "dayTotal": zod.number()
+})),
+  "fixedCosts": zod.array(zod.object({
+  "category": zod.string(),
+  "description": zod.string(),
+  "estimatedCostPerNight": zod.number(),
+  "totalEstimated": zod.number(),
+  "notes": zod.string().nullish()
+})),
+  "tripTotal": zod.object({
+  "low": zod.number(),
+  "mid": zod.number(),
+  "high": zod.number()
+}),
+  "localTips": zod.array(zod.string())
+}).optional(),
+  "tripChecklist": zod.object({
+  "categories": zod.array(zod.object({
+  "name": zod.string(),
+  "items": zod.array(zod.object({
+  "label": zod.string(),
+  "essential": zod.boolean(),
+  "link": zod.string().nullish(),
+  "linkLabel": zod.string().nullish(),
+  "detail": zod.string().nullish()
+}))
+}))
+}).optional()
+})
+
+
+/**
+ * @summary Save new day order for a plan
+ */
+export const ReorderDaysParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ReorderDaysBody = zod.object({
+  "dayOrder": zod.array(zod.number())
+})
+
+export const ReorderDaysResponse = zod.object({
+  "id": zod.number(),
+  "shareCode": zod.string(),
+  "city": zod.string(),
+  "country": zod.string(),
+  "countryCode": zod.string(),
+  "startDate": zod.string(),
+  "endDate": zod.string(),
+  "travellerType": zod.string(),
+  "budget": zod.string().nullish(),
+  "preferences": zod.string().nullish(),
+  "tripSummary": zod.string(),
+  "photoUrl": zod.string(),
+  "createdAt": zod.string(),
+  "customName": zod.string().nullish(),
+  "tripNotes": zod.string().nullish(),
+  "dayOrder": zod.array(zod.number()).nullish(),
+  "status": zod.string().nullish(),
+  "days": zod.array(zod.object({
+  "dayNumber": zod.number(),
+  "date": zod.string(),
+  "destinations": zod.array(zod.object({
+  "name": zod.string(),
+  "category": zod.string(),
+  "summary": zod.string(),
+  "insiderTips": zod.array(zod.string()),
+  "entryCost": zod.string(),
+  "howToGetThere": zod.record(zod.string(), zod.object({
+  "available": zod.boolean(),
+  "duration": zod.string().optional(),
+  "from": zod.string().optional(),
+  "line": zod.string().optional(),
+  "stop": zod.string().optional(),
+  "cost": zod.string().optional(),
+  "instructions": zod.string().optional()
+})).optional(),
+  "bestTimeToVisit": zod.string(),
+  "photoUrl": zod.string()
+}))
+})),
+  "hotels": zod.object({
+  "budget": zod.array(zod.object({
+  "name": zod.string(),
+  "neighbourhood": zod.string(),
+  "description": zod.string(),
+  "priceRange": zod.string(),
+  "type": zod.string(),
+  "photoUrl": zod.string().nullish(),
+  "mapsUrl": zod.string().nullish(),
+  "bookingUrl": zod.string().nullish(),
+  "airbnbUrl": zod.string().nullish()
+})),
+  "midRange": zod.array(zod.object({
+  "name": zod.string(),
+  "neighbourhood": zod.string(),
+  "description": zod.string(),
+  "priceRange": zod.string(),
+  "type": zod.string(),
+  "photoUrl": zod.string().nullish(),
+  "mapsUrl": zod.string().nullish(),
+  "bookingUrl": zod.string().nullish(),
+  "airbnbUrl": zod.string().nullish()
+})),
+  "luxury": zod.array(zod.object({
+  "name": zod.string(),
+  "neighbourhood": zod.string(),
+  "description": zod.string(),
+  "priceRange": zod.string(),
+  "type": zod.string(),
+  "photoUrl": zod.string().nullish(),
+  "mapsUrl": zod.string().nullish(),
+  "bookingUrl": zod.string().nullish(),
+  "airbnbUrl": zod.string().nullish()
+}))
+}),
+  "restaurants": zod.array(zod.object({
+  "name": zod.string(),
+  "cuisine": zod.string(),
+  "mustTryDish": zod.string(),
+  "neighbourhood": zod.string(),
+  "priceRange": zod.string(),
+  "description": zod.string(),
+  "photoUrl": zod.string().nullish(),
+  "mapsUrl": zod.string().nullish()
+})),
+  "misc": zod.array(zod.object({
+  "name": zod.string(),
+  "dateOrFrequency": zod.string(),
+  "description": zod.string(),
+  "location": zod.string(),
+  "isFree": zod.boolean()
+})),
+  "packingList": zod.object({
+  "categories": zod.array(zod.object({
+  "name": zod.string(),
+  "items": zod.array(zod.object({
+  "label": zod.string(),
+  "essential": zod.boolean(),
+  "note": zod.string().nullish()
+}))
+}))
+}).optional(),
+  "budgetEstimate": zod.object({
+  "currency": zod.string(),
+  "currencySymbol": zod.string(),
+  "budgetTier": zod.string(),
+  "dailyBreakdown": zod.array(zod.object({
+  "day": zod.number(),
+  "date": zod.string(),
+  "items": zod.array(zod.object({
+  "category": zod.string(),
+  "description": zod.string(),
+  "estimatedCost": zod.number(),
+  "notes": zod.string().nullish()
+})),
+  "dayTotal": zod.number()
+})),
+  "fixedCosts": zod.array(zod.object({
+  "category": zod.string(),
+  "description": zod.string(),
+  "estimatedCostPerNight": zod.number(),
+  "totalEstimated": zod.number(),
+  "notes": zod.string().nullish()
+})),
+  "tripTotal": zod.object({
+  "low": zod.number(),
+  "mid": zod.number(),
+  "high": zod.number()
+}),
+  "localTips": zod.array(zod.string())
+}).optional(),
+  "tripChecklist": zod.object({
+  "categories": zod.array(zod.object({
+  "name": zod.string(),
+  "items": zod.array(zod.object({
+  "label": zod.string(),
+  "essential": zod.boolean(),
+  "link": zod.string().nullish(),
+  "linkLabel": zod.string().nullish(),
+  "detail": zod.string().nullish()
+}))
+}))
+}).optional()
+})
+
+
+/**
+ * @summary Reorder destinations within a day
+ */
+export const ReorderDestinationsParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ReorderDestinationsBody = zod.object({
+  "dayIndex": zod.number(),
+  "destOrder": zod.array(zod.number())
+})
+
+export const ReorderDestinationsResponse = zod.object({
+  "id": zod.number(),
+  "shareCode": zod.string(),
+  "city": zod.string(),
+  "country": zod.string(),
+  "countryCode": zod.string(),
+  "startDate": zod.string(),
+  "endDate": zod.string(),
+  "travellerType": zod.string(),
+  "budget": zod.string().nullish(),
+  "preferences": zod.string().nullish(),
+  "tripSummary": zod.string(),
+  "photoUrl": zod.string(),
+  "createdAt": zod.string(),
+  "customName": zod.string().nullish(),
+  "tripNotes": zod.string().nullish(),
+  "dayOrder": zod.array(zod.number()).nullish(),
+  "status": zod.string().nullish(),
+  "days": zod.array(zod.object({
+  "dayNumber": zod.number(),
+  "date": zod.string(),
+  "destinations": zod.array(zod.object({
+  "name": zod.string(),
+  "category": zod.string(),
+  "summary": zod.string(),
+  "insiderTips": zod.array(zod.string()),
+  "entryCost": zod.string(),
+  "howToGetThere": zod.record(zod.string(), zod.object({
+  "available": zod.boolean(),
+  "duration": zod.string().optional(),
+  "from": zod.string().optional(),
+  "line": zod.string().optional(),
+  "stop": zod.string().optional(),
+  "cost": zod.string().optional(),
+  "instructions": zod.string().optional()
+})).optional(),
+  "bestTimeToVisit": zod.string(),
+  "photoUrl": zod.string()
+}))
+})),
+  "hotels": zod.object({
+  "budget": zod.array(zod.object({
+  "name": zod.string(),
+  "neighbourhood": zod.string(),
+  "description": zod.string(),
+  "priceRange": zod.string(),
+  "type": zod.string(),
+  "photoUrl": zod.string().nullish(),
+  "mapsUrl": zod.string().nullish(),
+  "bookingUrl": zod.string().nullish(),
+  "airbnbUrl": zod.string().nullish()
+})),
+  "midRange": zod.array(zod.object({
+  "name": zod.string(),
+  "neighbourhood": zod.string(),
+  "description": zod.string(),
+  "priceRange": zod.string(),
+  "type": zod.string(),
+  "photoUrl": zod.string().nullish(),
+  "mapsUrl": zod.string().nullish(),
+  "bookingUrl": zod.string().nullish(),
+  "airbnbUrl": zod.string().nullish()
+})),
+  "luxury": zod.array(zod.object({
+  "name": zod.string(),
+  "neighbourhood": zod.string(),
+  "description": zod.string(),
+  "priceRange": zod.string(),
+  "type": zod.string(),
+  "photoUrl": zod.string().nullish(),
+  "mapsUrl": zod.string().nullish(),
+  "bookingUrl": zod.string().nullish(),
+  "airbnbUrl": zod.string().nullish()
+}))
+}),
+  "restaurants": zod.array(zod.object({
+  "name": zod.string(),
+  "cuisine": zod.string(),
+  "mustTryDish": zod.string(),
+  "neighbourhood": zod.string(),
+  "priceRange": zod.string(),
+  "description": zod.string(),
+  "photoUrl": zod.string().nullish(),
+  "mapsUrl": zod.string().nullish()
+})),
+  "misc": zod.array(zod.object({
+  "name": zod.string(),
+  "dateOrFrequency": zod.string(),
+  "description": zod.string(),
+  "location": zod.string(),
+  "isFree": zod.boolean()
+})),
+  "packingList": zod.object({
+  "categories": zod.array(zod.object({
+  "name": zod.string(),
+  "items": zod.array(zod.object({
+  "label": zod.string(),
+  "essential": zod.boolean(),
+  "note": zod.string().nullish()
+}))
+}))
+}).optional(),
+  "budgetEstimate": zod.object({
+  "currency": zod.string(),
+  "currencySymbol": zod.string(),
+  "budgetTier": zod.string(),
+  "dailyBreakdown": zod.array(zod.object({
+  "day": zod.number(),
+  "date": zod.string(),
+  "items": zod.array(zod.object({
+  "category": zod.string(),
+  "description": zod.string(),
+  "estimatedCost": zod.number(),
+  "notes": zod.string().nullish()
+})),
+  "dayTotal": zod.number()
+})),
+  "fixedCosts": zod.array(zod.object({
+  "category": zod.string(),
+  "description": zod.string(),
+  "estimatedCostPerNight": zod.number(),
+  "totalEstimated": zod.number(),
+  "notes": zod.string().nullish()
+})),
+  "tripTotal": zod.object({
+  "low": zod.number(),
+  "mid": zod.number(),
+  "high": zod.number()
+}),
+  "localTips": zod.array(zod.string())
+}).optional(),
+  "tripChecklist": zod.object({
+  "categories": zod.array(zod.object({
+  "name": zod.string(),
+  "items": zod.array(zod.object({
+  "label": zod.string(),
+  "essential": zod.boolean(),
+  "link": zod.string().nullish(),
+  "linkLabel": zod.string().nullish(),
+  "detail": zod.string().nullish()
+}))
+}))
+}).optional()
+})
+
+
+/**
+ * @summary Remove a destination from a day
+ */
+export const RemoveDestinationParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const RemoveDestinationBody = zod.object({
+  "dayIndex": zod.number(),
+  "destIndex": zod.number()
+})
+
+export const RemoveDestinationResponse = zod.object({
+  "id": zod.number(),
+  "shareCode": zod.string(),
+  "city": zod.string(),
+  "country": zod.string(),
+  "countryCode": zod.string(),
+  "startDate": zod.string(),
+  "endDate": zod.string(),
+  "travellerType": zod.string(),
+  "budget": zod.string().nullish(),
+  "preferences": zod.string().nullish(),
+  "tripSummary": zod.string(),
+  "photoUrl": zod.string(),
+  "createdAt": zod.string(),
+  "customName": zod.string().nullish(),
+  "tripNotes": zod.string().nullish(),
+  "dayOrder": zod.array(zod.number()).nullish(),
+  "status": zod.string().nullish(),
+  "days": zod.array(zod.object({
+  "dayNumber": zod.number(),
+  "date": zod.string(),
+  "destinations": zod.array(zod.object({
+  "name": zod.string(),
+  "category": zod.string(),
+  "summary": zod.string(),
+  "insiderTips": zod.array(zod.string()),
+  "entryCost": zod.string(),
+  "howToGetThere": zod.record(zod.string(), zod.object({
+  "available": zod.boolean(),
+  "duration": zod.string().optional(),
+  "from": zod.string().optional(),
+  "line": zod.string().optional(),
+  "stop": zod.string().optional(),
+  "cost": zod.string().optional(),
+  "instructions": zod.string().optional()
+})).optional(),
+  "bestTimeToVisit": zod.string(),
+  "photoUrl": zod.string()
+}))
+})),
+  "hotels": zod.object({
+  "budget": zod.array(zod.object({
+  "name": zod.string(),
+  "neighbourhood": zod.string(),
+  "description": zod.string(),
+  "priceRange": zod.string(),
+  "type": zod.string(),
+  "photoUrl": zod.string().nullish(),
+  "mapsUrl": zod.string().nullish(),
+  "bookingUrl": zod.string().nullish(),
+  "airbnbUrl": zod.string().nullish()
+})),
+  "midRange": zod.array(zod.object({
+  "name": zod.string(),
+  "neighbourhood": zod.string(),
+  "description": zod.string(),
+  "priceRange": zod.string(),
+  "type": zod.string(),
+  "photoUrl": zod.string().nullish(),
+  "mapsUrl": zod.string().nullish(),
+  "bookingUrl": zod.string().nullish(),
+  "airbnbUrl": zod.string().nullish()
+})),
+  "luxury": zod.array(zod.object({
+  "name": zod.string(),
+  "neighbourhood": zod.string(),
+  "description": zod.string(),
+  "priceRange": zod.string(),
+  "type": zod.string(),
+  "photoUrl": zod.string().nullish(),
+  "mapsUrl": zod.string().nullish(),
+  "bookingUrl": zod.string().nullish(),
+  "airbnbUrl": zod.string().nullish()
+}))
+}),
+  "restaurants": zod.array(zod.object({
+  "name": zod.string(),
+  "cuisine": zod.string(),
+  "mustTryDish": zod.string(),
+  "neighbourhood": zod.string(),
+  "priceRange": zod.string(),
+  "description": zod.string(),
+  "photoUrl": zod.string().nullish(),
+  "mapsUrl": zod.string().nullish()
+})),
+  "misc": zod.array(zod.object({
+  "name": zod.string(),
+  "dateOrFrequency": zod.string(),
+  "description": zod.string(),
+  "location": zod.string(),
+  "isFree": zod.boolean()
+})),
+  "packingList": zod.object({
+  "categories": zod.array(zod.object({
+  "name": zod.string(),
+  "items": zod.array(zod.object({
+  "label": zod.string(),
+  "essential": zod.boolean(),
+  "note": zod.string().nullish()
+}))
+}))
+}).optional(),
+  "budgetEstimate": zod.object({
+  "currency": zod.string(),
+  "currencySymbol": zod.string(),
+  "budgetTier": zod.string(),
+  "dailyBreakdown": zod.array(zod.object({
+  "day": zod.number(),
+  "date": zod.string(),
+  "items": zod.array(zod.object({
+  "category": zod.string(),
+  "description": zod.string(),
+  "estimatedCost": zod.number(),
+  "notes": zod.string().nullish()
+})),
+  "dayTotal": zod.number()
+})),
+  "fixedCosts": zod.array(zod.object({
+  "category": zod.string(),
+  "description": zod.string(),
+  "estimatedCostPerNight": zod.number(),
+  "totalEstimated": zod.number(),
+  "notes": zod.string().nullish()
+})),
+  "tripTotal": zod.object({
+  "low": zod.number(),
+  "mid": zod.number(),
+  "high": zod.number()
+}),
+  "localTips": zod.array(zod.string())
+}).optional(),
+  "tripChecklist": zod.object({
+  "categories": zod.array(zod.object({
+  "name": zod.string(),
+  "items": zod.array(zod.object({
+  "label": zod.string(),
+  "essential": zod.boolean(),
+  "link": zod.string().nullish(),
+  "linkLabel": zod.string().nullish(),
+  "detail": zod.string().nullish()
+}))
+}))
+}).optional()
+})
+
+
+/**
+ * @summary Get per-destination note
+ */
+export const GetDestinationNoteParams = zod.object({
+  "id": zod.coerce.number(),
+  "dayIndex": zod.coerce.number(),
+  "destIndex": zod.coerce.number()
+})
+
+export const GetDestinationNoteResponse = zod.object({
+  "planId": zod.number(),
+  "dayIndex": zod.number(),
+  "destIndex": zod.number(),
+  "note": zod.string(),
+  "updatedAt": zod.string()
+})
+
+
+/**
+ * @summary Save per-destination note
+ */
+export const UpsertDestinationNoteParams = zod.object({
+  "id": zod.coerce.number(),
+  "dayIndex": zod.coerce.number(),
+  "destIndex": zod.coerce.number()
+})
+
+export const UpsertDestinationNoteBody = zod.object({
+  "note": zod.string()
+})
+
+export const UpsertDestinationNoteResponse = zod.object({
+  "planId": zod.number(),
+  "dayIndex": zod.number(),
+  "destIndex": zod.number(),
+  "note": zod.string(),
+  "updatedAt": zod.string()
+})
+
+
+/**
+ * @summary Get all destination notes for a plan
+ */
+export const GetAllDestinationNotesParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetAllDestinationNotesResponseItem = zod.object({
+  "planId": zod.number(),
+  "dayIndex": zod.number(),
+  "destIndex": zod.number(),
+  "note": zod.string(),
+  "updatedAt": zod.string()
+})
+export const GetAllDestinationNotesResponse = zod.array(GetAllDestinationNotesResponseItem)
+
+
+/**
  * @summary Regenerate a plan with fresh AI output
  */
 export const RegeneratePlanParams = zod.object({
@@ -298,6 +1305,10 @@ export const RegeneratePlanResponse = zod.object({
   "tripSummary": zod.string(),
   "photoUrl": zod.string(),
   "createdAt": zod.string(),
+  "customName": zod.string().nullish(),
+  "tripNotes": zod.string().nullish(),
+  "dayOrder": zod.array(zod.number()).nullish(),
+  "status": zod.string().nullish(),
   "days": zod.array(zod.object({
   "dayNumber": zod.number(),
   "date": zod.string(),
@@ -447,6 +1458,10 @@ export const GetPublicPlanResponse = zod.object({
   "tripSummary": zod.string(),
   "photoUrl": zod.string(),
   "createdAt": zod.string(),
+  "customName": zod.string().nullish(),
+  "tripNotes": zod.string().nullish(),
+  "dayOrder": zod.array(zod.number()).nullish(),
+  "status": zod.string().nullish(),
   "days": zod.array(zod.object({
   "dayNumber": zod.number(),
   "date": zod.string(),

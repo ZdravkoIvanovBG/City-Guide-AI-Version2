@@ -9,6 +9,15 @@ import {
   useGetProfile,
   useSearchRoutes,
   useGetCityAutocomplete,
+  useRenamePlan,
+  useUpdatePlanNotes,
+  useUpdatePlanStatus,
+  useReorderDays,
+  useReorderDestinations,
+  useRemoveDestination,
+  useGetAllDestinationNotes,
+  useUpsertDestinationNote,
+  getGetAllDestinationNotesQueryKey,
   getGetProfileQueryKey,
   getGetCityAutocompleteQueryKey,
   TravelPlan,
@@ -28,17 +37,37 @@ import {
   ChecklistItem,
   RouteOption,
   CityOption,
+  DestinationNote,
 } from "@workspace/api-client-react";
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+  arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { useQueryClient } from "@tanstack/react-query";
 import { Navbar } from "@/components/layout/navbar";
 import {
   MapPin, Clock, Info, ExternalLink, Share2, Download,
   Footprints, Bus, Train, TramFront, Car, Bike, InfoIcon,
   ChevronDown, Package, Wallet, ClipboardList,
   Plane, Ship, Lightbulb, ArrowRight, Search,
+  Edit2, Check, X, GripVertical, Trash2, ChevronUp, ChevronDown as ChevronDownIcon,
+  StickyNote, Tag,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useToast } from "@/hooks/use-toast";
 import type { LucideIcon } from "lucide-react";
 
 // ── Transport config ────────────────────────────────────────────────────────
@@ -97,6 +126,16 @@ const MODE_CONFIG: Record<string, ModeConfig> = {
 };
 
 const TRANSPORT_MODE_ORDER = ["walking", "bus", "subway", "tram", "taxi", "bicycle"];
+
+// ── Status config ────────────────────────────────────────────────────────────
+
+const STATUS_CONFIG: Record<string, { label: string; className: string; dot?: string }> = {
+  planning:  { label: "Planning",  className: "border-blue-400/40 text-blue-400 bg-blue-950/30", dot: "bg-blue-400" },
+  booked:    { label: "Booked",    className: "border-amber-400/40 text-amber-400 bg-amber-950/30", dot: "bg-amber-400" },
+  ongoing:   { label: "Ongoing",   className: "border-green-400/40 text-green-400 bg-green-950/30", dot: "bg-green-400 animate-pulse" },
+  completed: { label: "Completed", className: "border-emerald-600/40 text-emerald-500 bg-emerald-950/20", dot: "bg-emerald-500" },
+  wishlist:  { label: "Wishlist",  className: "border-purple-400/40 text-purple-400 bg-purple-950/30", dot: "bg-purple-400" },
+};
 
 // Handles both legacy string format and new object format from DB
 function parseMode(raw: unknown): (TransportMode & { available: true }) | null {
@@ -273,13 +312,96 @@ function WeatherStrip({ day, weatherByDate }: { day: PlanDay; weatherByDate: Map
 export default function PlanView() {
   const [, params] = useRoute("/plan/:id/view");
   const id = parseInt(params?.id || "0", 10);
-  
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
   const { data: plan, isLoading, error } = useGetPlan(id, {
-    query: {
-      enabled: !!id,
-      queryKey: getGetPlanQueryKey(id)
-    }
+    query: { enabled: !!id, queryKey: getGetPlanQueryKey(id) }
   });
+
+  // Who owns this plan?
+  const { data: profile } = useGetProfile({ query: { queryKey: getGetProfileQueryKey() } });
+  const isOwner = !!profile && !!plan && (plan as unknown as { userId?: number }).userId === profile.id;
+
+  // Edit state
+  const [editingName, setEditingName] = useState(false);
+  const [nameInput, setNameInput] = useState("");
+  const [editingNotes, setEditingNotes] = useState(false);
+  const [notesInput, setNotesInput] = useState("");
+  const [statusOpen, setStatusOpen] = useState(false);
+
+  // Local day order (for optimistic DnD)
+  const [localDayOrder, setLocalDayOrder] = useState<number[] | null>(null);
+  useEffect(() => { setLocalDayOrder(null); }, [plan?.id]);
+
+  // Mutations
+  const { mutate: renamePlan } = useRenamePlan();
+  const { mutate: updateNotes } = useUpdatePlanNotes();
+  const { mutate: updateStatus } = useUpdatePlanStatus();
+  const { mutate: reorderDaysMut } = useReorderDays();
+  const { mutate: reorderDestsMut } = useReorderDestinations();
+  const { mutate: removeDestMut } = useRemoveDestination();
+
+  // Destination notes
+  const { data: allDestNotes } = useGetAllDestinationNotes(id, {
+    query: { enabled: !!id && isOwner, queryKey: getGetAllDestinationNotesQueryKey(id) }
+  });
+  const destNoteMap = new Map<string, string>(
+    (allDestNotes ?? []).map((n: DestinationNote) => [`${n.dayIndex}-${n.destIndex}`, n.note])
+  );
+
+  const invalidatePlan = () => queryClient.invalidateQueries({ queryKey: getGetPlanQueryKey(id) });
+
+  const handleRename = () => {
+    const trimmed = nameInput.trim().slice(0, 60);
+    renamePlan({ id, data: { customName: trimmed || null } }, {
+      onSuccess: () => { setEditingName(false); invalidatePlan(); },
+      onError: () => toast({ title: "Rename failed", variant: "destructive" }),
+    });
+  };
+
+  const handleNotesSave = () => {
+    updateNotes({ id, data: { tripNotes: notesInput || null } }, {
+      onSuccess: () => { setEditingNotes(false); invalidatePlan(); },
+      onError: () => toast({ title: "Save failed", variant: "destructive" }),
+    });
+  };
+
+  const handleStatus = (status: string) => {
+    setStatusOpen(false);
+    updateStatus({ id, data: { status } }, {
+      onSuccess: invalidatePlan,
+      onError: () => toast({ title: "Status update failed", variant: "destructive" }),
+    });
+  };
+
+  // DnD sensors
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+
+  // Ordered days (apply localDayOrder if set, else plan.dayOrder, else original)
+  const orderedDays = (() => {
+    if (!plan) return [];
+    const days = plan.days as PlanDay[];
+    const order = localDayOrder ?? (plan.dayOrder as number[] | null);
+    if (!order || order.length !== days.length) return days;
+    return order.map(i => days[i]).filter(Boolean);
+  })();
+
+  const handleDayDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id || !plan) return;
+    const days = plan.days as PlanDay[];
+    const currentOrder = localDayOrder ?? (plan.dayOrder as number[] | null) ?? days.map((_, i) => i);
+    const oldIdx = currentOrder.findIndex(i => i === Number(active.id));
+    const newIdx = currentOrder.findIndex(i => i === Number(over.id));
+    if (oldIdx === -1 || newIdx === -1) return;
+    const newOrder = arrayMove(currentOrder, oldIdx, newIdx);
+    setLocalDayOrder(newOrder);
+    reorderDaysMut({ id, data: { dayOrder: newOrder } }, {
+      onSuccess: invalidatePlan,
+      onError: () => { setLocalDayOrder(null); toast({ title: "Reorder failed", variant: "destructive" }); },
+    });
+  };
 
   // Fetch weather in parallel — never blocks plan from rendering
   const weatherParams = {
@@ -356,9 +478,110 @@ export default function PlanView() {
               <span>{plan.country}</span>
               <span className="w-1 h-1 rounded-full bg-primary" />
               <span>{format(new Date(plan.startDate), "MMM d")} – {format(new Date(plan.endDate), "MMM d, yyyy")}</span>
+
+              {/* Status pill */}
+              {isOwner && (
+                <div className="relative">
+                  <button
+                    onClick={() => setStatusOpen(o => !o)}
+                    className={`flex items-center gap-1.5 px-2.5 py-0.5 border text-[11px] font-medium uppercase tracking-widest transition-all ${STATUS_CONFIG[plan.status ?? "planning"]?.className ?? STATUS_CONFIG.planning.className}`}
+                  >
+                    <span className={`w-1.5 h-1.5 rounded-full ${STATUS_CONFIG[plan.status ?? "planning"]?.dot ?? "bg-blue-400"}`} />
+                    {STATUS_CONFIG[plan.status ?? "planning"]?.label ?? "Planning"}
+                    <Tag className="w-3 h-3 ml-0.5 opacity-60" />
+                  </button>
+                  {statusOpen && (
+                    <div className="absolute top-full left-0 mt-1 z-50 bg-card border border-border shadow-xl min-w-[140px]">
+                      {Object.entries(STATUS_CONFIG).map(([key, cfg]) => (
+                        <button
+                          key={key}
+                          onClick={() => handleStatus(key)}
+                          className={`w-full text-left px-3 py-2 text-xs font-medium uppercase tracking-widest flex items-center gap-2 hover:bg-muted transition-colors ${plan.status === key ? "text-primary" : "text-muted-foreground"}`}
+                        >
+                          <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} /> {cfg.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+              {!isOwner && plan.status && plan.status !== "planning" && (
+                <span className={`flex items-center gap-1.5 px-2.5 py-0.5 border text-[11px] font-medium uppercase tracking-widest ${STATUS_CONFIG[plan.status]?.className ?? ""}`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${STATUS_CONFIG[plan.status]?.dot}`} />
+                  {STATUS_CONFIG[plan.status]?.label}
+                </span>
+              )}
             </div>
-            <h1 className="font-serif text-6xl md:text-8xl mb-6 text-white leading-none">{plan.city}</h1>
+
+            {/* Title — editable if owner */}
+            {editingName ? (
+              <div className="flex items-center gap-3 mb-6">
+                <input
+                  autoFocus
+                  value={nameInput}
+                  maxLength={60}
+                  onChange={e => setNameInput(e.target.value)}
+                  onKeyDown={e => { if (e.key === "Enter") handleRename(); if (e.key === "Escape") setEditingName(false); }}
+                  className="font-serif text-4xl md:text-5xl bg-transparent border-b-2 border-primary text-white outline-none w-full max-w-xl placeholder-white/30"
+                  placeholder={plan.city}
+                />
+                <button onClick={handleRename} className="p-2 text-primary hover:text-white transition-colors"><Check className="w-5 h-5" /></button>
+                <button onClick={() => setEditingName(false)} className="p-2 text-muted-foreground hover:text-white transition-colors"><X className="w-5 h-5" /></button>
+              </div>
+            ) : (
+              <div className="group flex items-start gap-3 mb-6">
+                <h1 className="font-serif text-6xl md:text-8xl text-white leading-none">
+                  {plan.customName ?? plan.city}
+                  {plan.customName && <span className="text-white/40 ml-3 text-3xl md:text-4xl">{plan.city}</span>}
+                </h1>
+                {isOwner && (
+                  <button
+                    onClick={() => { setNameInput(plan.customName ?? ""); setEditingName(true); }}
+                    className="opacity-0 group-hover:opacity-100 mt-3 p-1.5 text-white/40 hover:text-white transition-all"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            )}
+
             <p className="text-lg md:text-xl text-gray-300 font-light max-w-2xl leading-relaxed">{plan.tripSummary}</p>
+
+            {/* Trip notes */}
+            {isOwner && (
+              <div className="mt-6 max-w-2xl">
+                {editingNotes ? (
+                  <div className="space-y-2">
+                    <textarea
+                      autoFocus
+                      value={notesInput}
+                      onChange={e => setNotesInput(e.target.value)}
+                      rows={3}
+                      className="w-full bg-background/30 backdrop-blur border border-primary/50 text-white/90 placeholder-white/30 text-sm p-3 resize-none outline-none focus:border-primary"
+                      placeholder="Add trip notes, reminders, or anything personal…"
+                    />
+                    <div className="flex gap-2">
+                      <button onClick={handleNotesSave} className="text-xs font-medium uppercase tracking-widest text-primary hover:text-white flex items-center gap-1 px-3 py-1.5 border border-primary/50 hover:border-primary transition-all"><Check className="w-3 h-3" /> Save</button>
+                      <button onClick={() => setEditingNotes(false)} className="text-xs font-medium uppercase tracking-widest text-muted-foreground hover:text-white flex items-center gap-1 px-3 py-1.5 border border-border/50 hover:border-border transition-all"><X className="w-3 h-3" /> Cancel</button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => { setNotesInput(plan.tripNotes ?? ""); setEditingNotes(true); }}
+                    className="group/notes flex items-start gap-2 text-left text-sm text-white/50 hover:text-white/80 transition-colors"
+                  >
+                    <StickyNote className="w-3.5 h-3.5 shrink-0 mt-0.5 group-hover/notes:text-primary transition-colors" />
+                    <span className="italic">{plan.tripNotes ?? "Add trip notes…"}</span>
+                  </button>
+                )}
+              </div>
+            )}
+            {!isOwner && plan.tripNotes && (
+              <p className="mt-4 text-sm text-white/60 italic max-w-2xl flex items-start gap-2">
+                <StickyNote className="w-3.5 h-3.5 shrink-0 mt-0.5" /> {plan.tripNotes}
+              </p>
+            )}
+
             <div className="flex gap-4 mt-8">
               <Button variant="outline" className="bg-background/20 backdrop-blur-md border-border/50 hover:bg-background/40 rounded-none">
                 <Share2 className="w-4 h-4 mr-2" /> Share Plan
@@ -392,10 +615,45 @@ export default function PlanView() {
             <GettingThereTab plan={plan} />
           </TabsContent>
 
-          <TabsContent value="itinerary" className="space-y-24 mt-0 outline-none">
-            {plan.days.map((day, idx) => (
-              <DaySection key={idx} day={day} weatherByDate={weatherByDate} />
-            ))}
+          <TabsContent value="itinerary" className="mt-0 outline-none">
+            {isOwner ? (
+              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDayDragEnd}>
+                <SortableContext items={(orderedDays as PlanDay[]).map((_, i) => {
+                  const days = plan.days as PlanDay[];
+                  const order = localDayOrder ?? (plan.dayOrder as number[] | null);
+                  if (order && order.length === days.length) return order[i];
+                  return i;
+                })} strategy={verticalListSortingStrategy}>
+                  <div className="space-y-24">
+                    {(orderedDays as PlanDay[]).map((day, idx) => {
+                      const days = plan.days as PlanDay[];
+                      const order = localDayOrder ?? (plan.dayOrder as number[] | null);
+                      const originalIdx = order && order.length === days.length ? order[idx] : idx;
+                      return (
+                        <SortableDay key={originalIdx} dayOriginalIndex={originalIdx}>
+                          <DaySection
+                            day={day}
+                            dayOriginalIndex={originalIdx}
+                            weatherByDate={weatherByDate}
+                            isOwner={isOwner}
+                            planId={id}
+                            destNoteMap={destNoteMap}
+                            onReorderDests={(destOrder) => reorderDestsMut({ id, data: { dayIndex: originalIdx, destOrder } }, { onSuccess: invalidatePlan })}
+                            onRemoveDest={(destIndex) => removeDestMut({ id, data: { dayIndex: originalIdx, destIndex } }, { onSuccess: invalidatePlan })}
+                          />
+                        </SortableDay>
+                      );
+                    })}
+                  </div>
+                </SortableContext>
+              </DndContext>
+            ) : (
+              <div className="space-y-24">
+                {(plan.days as PlanDay[]).map((day, idx) => (
+                  <DaySection key={idx} day={day} dayOriginalIndex={idx} weatherByDate={weatherByDate} isOwner={false} planId={id} destNoteMap={destNoteMap} onReorderDests={() => {}} onRemoveDest={() => {}} />
+                ))}
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="hotels" className="mt-0 outline-none">
@@ -1339,9 +1597,56 @@ function BeforeYouGoTab({ plan }: { plan: TravelPlan }) {
   );
 }
 
+// ── Sortable day wrapper ──────────────────────────────────────────────────────
+
+function SortableDay({ dayOriginalIndex, children }: { dayOriginalIndex: number; children: React.ReactNode }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: dayOriginalIndex });
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 }}
+      className="relative"
+    >
+      <button
+        {...attributes}
+        {...listeners}
+        className="absolute -left-8 top-2 z-20 p-1 text-muted-foreground/30 hover:text-muted-foreground cursor-grab active:cursor-grabbing transition-colors touch-none"
+        aria-label="Drag to reorder day"
+      >
+        <GripVertical className="w-4 h-4" />
+      </button>
+      {children}
+    </div>
+  );
+}
+
 // ── Day section ─────────────────────────────────────────────────────────────
 
-function DaySection({ day, weatherByDate }: { day: PlanDay; weatherByDate: Map<string, DayWeather> }) {
+interface DaySectionProps {
+  day: PlanDay;
+  dayOriginalIndex: number;
+  weatherByDate: Map<string, DayWeather>;
+  isOwner: boolean;
+  planId: number;
+  destNoteMap: Map<string, string>;
+  onReorderDests: (destOrder: number[]) => void;
+  onRemoveDest: (destIndex: number) => void;
+}
+
+function DaySection({ day, dayOriginalIndex, weatherByDate, isOwner, planId, destNoteMap, onReorderDests, onRemoveDest }: DaySectionProps) {
+  const handleMoveUp = (i: number) => {
+    if (i === 0) return;
+    const order = day.destinations.map((_, idx) => idx);
+    [order[i - 1], order[i]] = [order[i], order[i - 1]];
+    onReorderDests(order);
+  };
+  const handleMoveDown = (i: number) => {
+    if (i >= day.destinations.length - 1) return;
+    const order = day.destinations.map((_, idx) => idx);
+    [order[i], order[i + 1]] = [order[i + 1], order[i]];
+    onReorderDests(order);
+  };
+
   return (
     <div className="relative">
       <div className="absolute -left-4 -top-12 md:-left-12 md:-top-20 text-[120px] md:text-[200px] font-serif font-bold text-muted/20 select-none pointer-events-none leading-none z-0">
@@ -1356,7 +1661,20 @@ function DaySection({ day, weatherByDate }: { day: PlanDay; weatherByDate: Map<s
       </div>
       <div className="space-y-8 relative z-10 pl-2 md:pl-8 border-l border-border/50">
         {day.destinations.map((dest, i) => (
-          <DestinationCard key={i} dest={dest} />
+          <DestinationCard
+            key={i}
+            dest={dest}
+            destIndex={i}
+            dayIndex={dayOriginalIndex}
+            planId={planId}
+            isOwner={isOwner}
+            savedNote={destNoteMap.get(`${dayOriginalIndex}-${i}`) ?? ""}
+            isFirst={i === 0}
+            isLast={i === day.destinations.length - 1}
+            onMoveUp={() => handleMoveUp(i)}
+            onMoveDown={() => handleMoveDown(i)}
+            onRemove={() => onRemoveDest(i)}
+          />
         ))}
       </div>
     </div>
@@ -1365,7 +1683,34 @@ function DaySection({ day, weatherByDate }: { day: PlanDay; weatherByDate: Map<s
 
 // ── Destination card ─────────────────────────────────────────────────────────
 
-function DestinationCard({ dest }: { dest: Destination }) {
+interface DestinationCardProps {
+  dest: Destination;
+  destIndex: number;
+  dayIndex: number;
+  planId: number;
+  isOwner: boolean;
+  savedNote: string;
+  isFirst: boolean;
+  isLast: boolean;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
+  onRemove: () => void;
+}
+
+function DestinationCard({ dest, destIndex, dayIndex, planId, isOwner, savedNote, isFirst, isLast, onMoveUp, onMoveDown, onRemove }: DestinationCardProps) {
+  const [noteOpen, setNoteOpen] = useState(false);
+  const [noteText, setNoteText] = useState(savedNote);
+  const [confirmRemove, setConfirmRemove] = useState(false);
+  const { mutate: saveNote, isPending: savingNote } = useUpsertDestinationNote();
+
+  useEffect(() => { setNoteText(savedNote); }, [savedNote]);
+
+  const handleSaveNote = () => {
+    saveNote({ id: planId, dayIndex, destIndex, data: { note: noteText } }, {
+      onSuccess: () => setNoteOpen(false),
+    });
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -1374,6 +1719,31 @@ function DestinationCard({ dest }: { dest: Destination }) {
       className="bg-card border border-border overflow-hidden relative group"
     >
       <div className="absolute -left-[5px] top-8 w-2 h-12 bg-primary rounded-r-sm" />
+
+      {/* Owner controls */}
+      {isOwner && (
+        <div className="absolute top-3 right-3 z-20 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <button onClick={onMoveUp} disabled={isFirst} className="p-1.5 rounded-sm bg-background/70 backdrop-blur-sm border border-border/50 text-muted-foreground hover:text-foreground disabled:opacity-20 disabled:cursor-not-allowed transition-all">
+            <ChevronUp className="w-3.5 h-3.5" />
+          </button>
+          <button onClick={onMoveDown} disabled={isLast} className="p-1.5 rounded-sm bg-background/70 backdrop-blur-sm border border-border/50 text-muted-foreground hover:text-foreground disabled:opacity-20 disabled:cursor-not-allowed transition-all">
+            <ChevronDownIcon className="w-3.5 h-3.5" />
+          </button>
+          <button onClick={() => setNoteOpen(o => !o)} className={`p-1.5 rounded-sm bg-background/70 backdrop-blur-sm border transition-all ${noteOpen || savedNote ? "border-primary/50 text-primary" : "border-border/50 text-muted-foreground hover:text-foreground"}`}>
+            <StickyNote className="w-3.5 h-3.5" />
+          </button>
+          {confirmRemove ? (
+            <>
+              <button onClick={onRemove} className="px-2 py-1 text-[10px] font-medium uppercase tracking-widest rounded-sm bg-red-600/80 text-white border border-red-500">Remove</button>
+              <button onClick={() => setConfirmRemove(false)} className="p-1.5 rounded-sm bg-background/70 backdrop-blur-sm border border-border/50 text-muted-foreground hover:text-foreground transition-all"><X className="w-3.5 h-3.5" /></button>
+            </>
+          ) : (
+            <button onClick={() => setConfirmRemove(true)} className="p-1.5 rounded-sm bg-background/70 backdrop-blur-sm border border-border/50 text-muted-foreground hover:text-red-400 hover:border-red-400/50 hover:bg-red-950/50 transition-all">
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+      )}
 
       <div className="flex flex-col md:flex-row">
         {dest.photoUrl && (
@@ -1436,6 +1806,47 @@ function DestinationCard({ dest }: { dest: Destination }) {
               </ul>
             </div>
           )}
+
+          {/* Per-destination notes */}
+          <AnimatePresence>
+            {(noteOpen || savedNote) && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="overflow-hidden"
+              >
+                <div className="pt-4 border-t border-border/50">
+                  <div className="flex items-center gap-2 text-xs font-medium text-primary uppercase tracking-widest mb-2">
+                    <StickyNote className="w-3.5 h-3.5" /> My Notes
+                  </div>
+                  {isOwner && noteOpen ? (
+                    <div className="space-y-2">
+                      <textarea
+                        autoFocus
+                        value={noteText}
+                        onChange={e => setNoteText(e.target.value)}
+                        rows={3}
+                        className="w-full bg-muted/30 border border-border/50 text-foreground placeholder-muted-foreground text-sm p-3 resize-none outline-none focus:border-primary/50 transition-colors"
+                        placeholder="Jot a personal note for this stop…"
+                      />
+                      <div className="flex gap-2">
+                        <button onClick={handleSaveNote} disabled={savingNote} className="text-xs font-medium uppercase tracking-widest text-primary hover:text-foreground flex items-center gap-1 px-3 py-1.5 border border-primary/50 hover:border-primary transition-all disabled:opacity-50">
+                          <Check className="w-3 h-3" /> {savingNote ? "Saving…" : "Save"}
+                        </button>
+                        <button onClick={() => { setNoteOpen(false); setNoteText(savedNote); }} className="text-xs font-medium uppercase tracking-widest text-muted-foreground hover:text-foreground flex items-center gap-1 px-3 py-1.5 border border-border/50 hover:border-border transition-all">
+                          <X className="w-3 h-3" /> Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : savedNote ? (
+                    <p className="text-sm text-muted-foreground italic">{savedNote}</p>
+                  ) : null}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
     </motion.div>

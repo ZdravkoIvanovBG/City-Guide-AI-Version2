@@ -1,5 +1,8 @@
-import { pgTable, serial, text, timestamp, jsonb, integer, real } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, timestamp, jsonb, integer, real, unique } from "drizzle-orm/pg-core";
 import { usersTable } from "./users";
+
+export const PLAN_STATUSES = ["planning", "booked", "ongoing", "completed", "wishlist"] as const;
+export type PlanStatus = typeof PLAN_STATUSES[number];
 
 export const plansTable = pgTable("plans", {
   id: serial("id").primaryKey(),
@@ -19,8 +22,21 @@ export const plansTable = pgTable("plans", {
   tripSummary: text("trip_summary").notNull(),
   photoUrl: text("photo_url").notNull(),
   planData: jsonb("plan_data").notNull(),
+  customName: text("custom_name"),
+  tripNotes: text("trip_notes"),
+  dayOrder: jsonb("day_order"),
+  status: text("status").default("planning"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
+
+export const destinationNotesTable = pgTable("destination_notes", {
+  id: serial("id").primaryKey(),
+  planId: integer("plan_id").notNull().references(() => plansTable.id, { onDelete: "cascade" }),
+  dayIndex: integer("day_index").notNull(),
+  destIndex: integer("dest_index").notNull(),
+  note: text("note").notNull().default(""),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (t) => [unique("destination_notes_unique").on(t.planId, t.dayIndex, t.destIndex)]);
 
 export const photoCacheTable = pgTable("photo_cache", {
   id: serial("id").primaryKey(),

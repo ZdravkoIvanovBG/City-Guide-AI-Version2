@@ -133,6 +133,10 @@ export interface PlanSummary {
   budget?: string | null;
   createdAt: string;
   photoUrl: string;
+  /** @nullable */
+  customName?: string | null;
+  /** @nullable */
+  status?: string | null;
 }
 
 export interface TransportMode {
@@ -299,6 +303,14 @@ export interface TravelPlan {
   tripSummary: string;
   photoUrl: string;
   createdAt: string;
+  /** @nullable */
+  customName?: string | null;
+  /** @nullable */
+  tripNotes?: string | null;
+  /** @nullable */
+  dayOrder?: number[] | null;
+  /** @nullable */
+  status?: string | null;
   days: PlanDay[];
   hotels: HotelsByTier;
   restaurants: Restaurant[];
@@ -318,6 +330,14 @@ export interface DayWeather {
   chanceOfRain: number;
   windSpeed: number;
   isHistorical?: boolean;
+}
+
+export interface DestinationNote {
+  planId: number;
+  dayIndex: number;
+  destIndex: number;
+  note: string;
+  updatedAt: string;
 }
 
 export interface RouteSearchBody {
@@ -367,6 +387,38 @@ export interface RouteSearchResponse {
 
 export type GetCityAutocompleteParams = {
 q: string;
+};
+
+export type RenamePlanBody = {
+  /** @nullable */
+  customName: string | null;
+};
+
+export type UpdatePlanNotesBody = {
+  /** @nullable */
+  tripNotes: string | null;
+};
+
+export type UpdatePlanStatusBody = {
+  status: string;
+};
+
+export type ReorderDaysBody = {
+  dayOrder: number[];
+};
+
+export type ReorderDestinationsBody = {
+  dayIndex: number;
+  destOrder: number[];
+};
+
+export type RemoveDestinationBody = {
+  dayIndex: number;
+  destIndex: number;
+};
+
+export type UpsertDestinationNoteBody = {
+  note: string;
 };
 
 export type GetWeatherParams = {

@@ -7,6 +7,14 @@ import { format } from "date-fns";
 import { useQueryClient } from "@tanstack/react-query";
 import { getGetPlansQueryKey } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
+
+const STATUS_CONFIG: Record<string, { label: string; dot: string; className: string }> = {
+  planning:  { label: "Planning",  dot: "bg-blue-400",     className: "border-blue-400/40 text-blue-400 bg-blue-950/30" },
+  booked:    { label: "Booked",    dot: "bg-amber-400",    className: "border-amber-400/40 text-amber-400 bg-amber-950/30" },
+  ongoing:   { label: "Ongoing",   dot: "bg-green-400 animate-pulse", className: "border-green-400/40 text-green-400 bg-green-950/30" },
+  completed: { label: "Completed", dot: "bg-emerald-500",  className: "border-emerald-600/40 text-emerald-500 bg-emerald-950/20" },
+  wishlist:  { label: "Wishlist",  dot: "bg-purple-400",   className: "border-purple-400/40 text-purple-400 bg-purple-950/30" },
+};
 import {
   AlertDialog,
   AlertDialogAction,
@@ -75,9 +83,20 @@ export function PlanCard({ plan, index = 0 }: { plan: PlanSummary; index?: numbe
             <div className="absolute inset-0 bg-gradient-to-t from-background/90 to-transparent" />
 
             <div className="absolute bottom-0 left-0 w-full p-6 transform translate-y-2 group-hover:translate-y-0 transition-transform duration-500">
-              <h3 className="font-serif text-3xl text-white mb-1">{plan.city}</h3>
+              <h3 className="font-serif text-3xl text-white mb-1">{plan.customName ?? plan.city}</h3>
+              {plan.customName && <p className="text-white/50 text-sm mb-0.5">{plan.city}</p>}
               <p className="text-primary text-sm font-medium tracking-widest uppercase">{plan.country}</p>
             </div>
+
+            {/* Status badge */}
+            {plan.status && plan.status !== "planning" && STATUS_CONFIG[plan.status] && (
+              <div className="absolute top-3 left-3 z-10">
+                <span className={`flex items-center gap-1 px-2 py-0.5 border text-[10px] font-medium uppercase tracking-widest backdrop-blur-sm ${STATUS_CONFIG[plan.status].className}`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${STATUS_CONFIG[plan.status].dot}`} />
+                  {STATUS_CONFIG[plan.status].label}
+                </span>
+              </div>
+            )}
           </div>
 
           <div className="p-6 space-y-4">

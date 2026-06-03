@@ -240,6 +240,311 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /plans/{id}/rename:
+    patch:
+      operationId: renamePlan
+      tags: [plans]
+      summary: Set a custom name for a plan
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [customName]
+              properties:
+                customName:
+                  type: ["string", "null"]
+      responses:
+        "200":
+          description: Updated plan
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TravelPlan"
+        "404":
+          description: Plan not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /plans/{id}/notes:
+    patch:
+      operationId: updatePlanNotes
+      tags: [plans]
+      summary: Update trip notes for a plan
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tripNotes]
+              properties:
+                tripNotes:
+                  type: ["string", "null"]
+      responses:
+        "200":
+          description: Updated plan
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TravelPlan"
+        "404":
+          description: Plan not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /plans/{id}/status:
+    patch:
+      operationId: updatePlanStatus
+      tags: [plans]
+      summary: Set status tag on a plan
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+      responses:
+        "200":
+          description: Updated plan
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TravelPlan"
+        "404":
+          description: Plan not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /plans/{id}/reorder-days:
+    patch:
+      operationId: reorderDays
+      tags: [plans]
+      summary: Save new day order for a plan
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [dayOrder]
+              properties:
+                dayOrder:
+                  type: array
+                  items:
+                    type: integer
+      responses:
+        "200":
+          description: Updated plan
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TravelPlan"
+        "404":
+          description: Plan not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /plans/{id}/reorder-destinations:
+    patch:
+      operationId: reorderDestinations
+      tags: [plans]
+      summary: Reorder destinations within a day
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [dayIndex, destOrder]
+              properties:
+                dayIndex:
+                  type: integer
+                destOrder:
+                  type: array
+                  items:
+                    type: integer
+      responses:
+        "200":
+          description: Updated plan
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TravelPlan"
+        "404":
+          description: Plan not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /plans/{id}/remove-destination:
+    patch:
+      operationId: removeDestination
+      tags: [plans]
+      summary: Remove a destination from a day
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [dayIndex, destIndex]
+              properties:
+                dayIndex:
+                  type: integer
+                destIndex:
+                  type: integer
+      responses:
+        "200":
+          description: Updated plan
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TravelPlan"
+        "404":
+          description: Plan not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /plans/{id}/destination-notes/{dayIndex}/{destIndex}:
+    get:
+      operationId: getDestinationNote
+      tags: [plans]
+      summary: Get per-destination note
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: dayIndex
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: destIndex
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Destination note
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DestinationNote"
+    patch:
+      operationId: upsertDestinationNote
+      tags: [plans]
+      summary: Save per-destination note
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: dayIndex
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: destIndex
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [note]
+              properties:
+                note:
+                  type: string
+      responses:
+        "200":
+          description: Saved note
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DestinationNote"
+
+  /plans/{id}/destination-notes:
+    get:
+      operationId: getAllDestinationNotes
+      tags: [plans]
+      summary: Get all destination notes for a plan
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: All destination notes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DestinationNote"
+
   /plans/{id}/regenerate:
     post:
       operationId: regeneratePlan
@@ -698,6 +1003,10 @@ components:
           type: string
         photoUrl:
           type: string
+        customName:
+          type: ["string", "null"]
+        status:
+          type: ["string", "null"]
 
     TravelPlan:
       type: object
@@ -729,6 +1038,16 @@ components:
           type: string
         createdAt:
           type: string
+        customName:
+          type: ["string", "null"]
+        tripNotes:
+          type: ["string", "null"]
+        dayOrder:
+          type: ["array", "null"]
+          items:
+            type: integer
+        status:
+          type: ["string", "null"]
         days:
           type: array
           items:
@@ -890,6 +1209,21 @@ components:
           type: ["string", "null"]
         mapsUrl:
           type: ["string", "null"]
+
+    DestinationNote:
+      type: object
+      required: [planId, dayIndex, destIndex, note, updatedAt]
+      properties:
+        planId:
+          type: integer
+        dayIndex:
+          type: integer
+        destIndex:
+          type: integer
+        note:
+          type: string
+        updatedAt:
+          type: string
 
     RouteSearchBody:
       type: object

@@ -24,6 +24,7 @@ import type {
   AvatarInput,
   CityOption,
   DayWeather,
+  DestinationNote,
   ErrorResponse,
   FeaturedCity,
   GetCityAutocompleteParams,
@@ -36,10 +37,17 @@ import type {
   PlanSummary,
   ProfileUpdate,
   RegisterInput,
+  RemoveDestinationBody,
+  RenamePlanBody,
+  ReorderDaysBody,
+  ReorderDestinationsBody,
   RouteSearchBody,
   RouteSearchResponse,
   TravelPlan,
   TravelStats,
+  UpdatePlanNotesBody,
+  UpdatePlanStatusBody,
+  UpsertDestinationNoteBody,
   UserProfile
 } from './api.schemas';
 
@@ -792,6 +800,678 @@ export const useDeletePlan = <TError = ErrorType<ErrorResponse>,
       > => {
       return useMutation(getDeletePlanMutationOptions(options));
     }
+
+export const getRenamePlanUrl = (id: number,) => {
+
+
+
+
+  return `/api/plans/${id}/rename`
+}
+
+/**
+ * @summary Set a custom name for a plan
+ */
+export const renamePlan = async (id: number,
+    renamePlanBody: RenamePlanBody, options?: RequestInit): Promise<TravelPlan> => {
+
+  return customFetch<TravelPlan>(getRenamePlanUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      renamePlanBody,)
+  }
+);}
+
+
+
+
+export const getRenamePlanMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof renamePlan>>, TError,{id: number;data: BodyType<RenamePlanBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof renamePlan>>, TError,{id: number;data: BodyType<RenamePlanBody>}, TContext> => {
+
+const mutationKey = ['renamePlan'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof renamePlan>>, {id: number;data: BodyType<RenamePlanBody>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  renamePlan(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RenamePlanMutationResult = NonNullable<Awaited<ReturnType<typeof renamePlan>>>
+    export type RenamePlanMutationBody = BodyType<RenamePlanBody>
+    export type RenamePlanMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Set a custom name for a plan
+ */
+export const useRenamePlan = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof renamePlan>>, TError,{id: number;data: BodyType<RenamePlanBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof renamePlan>>,
+        TError,
+        {id: number;data: BodyType<RenamePlanBody>},
+        TContext
+      > => {
+      return useMutation(getRenamePlanMutationOptions(options));
+    }
+
+export const getUpdatePlanNotesUrl = (id: number,) => {
+
+
+
+
+  return `/api/plans/${id}/notes`
+}
+
+/**
+ * @summary Update trip notes for a plan
+ */
+export const updatePlanNotes = async (id: number,
+    updatePlanNotesBody: UpdatePlanNotesBody, options?: RequestInit): Promise<TravelPlan> => {
+
+  return customFetch<TravelPlan>(getUpdatePlanNotesUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      updatePlanNotesBody,)
+  }
+);}
+
+
+
+
+export const getUpdatePlanNotesMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updatePlanNotes>>, TError,{id: number;data: BodyType<UpdatePlanNotesBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updatePlanNotes>>, TError,{id: number;data: BodyType<UpdatePlanNotesBody>}, TContext> => {
+
+const mutationKey = ['updatePlanNotes'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updatePlanNotes>>, {id: number;data: BodyType<UpdatePlanNotesBody>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updatePlanNotes(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdatePlanNotesMutationResult = NonNullable<Awaited<ReturnType<typeof updatePlanNotes>>>
+    export type UpdatePlanNotesMutationBody = BodyType<UpdatePlanNotesBody>
+    export type UpdatePlanNotesMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Update trip notes for a plan
+ */
+export const useUpdatePlanNotes = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updatePlanNotes>>, TError,{id: number;data: BodyType<UpdatePlanNotesBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updatePlanNotes>>,
+        TError,
+        {id: number;data: BodyType<UpdatePlanNotesBody>},
+        TContext
+      > => {
+      return useMutation(getUpdatePlanNotesMutationOptions(options));
+    }
+
+export const getUpdatePlanStatusUrl = (id: number,) => {
+
+
+
+
+  return `/api/plans/${id}/status`
+}
+
+/**
+ * @summary Set status tag on a plan
+ */
+export const updatePlanStatus = async (id: number,
+    updatePlanStatusBody: UpdatePlanStatusBody, options?: RequestInit): Promise<TravelPlan> => {
+
+  return customFetch<TravelPlan>(getUpdatePlanStatusUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      updatePlanStatusBody,)
+  }
+);}
+
+
+
+
+export const getUpdatePlanStatusMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updatePlanStatus>>, TError,{id: number;data: BodyType<UpdatePlanStatusBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updatePlanStatus>>, TError,{id: number;data: BodyType<UpdatePlanStatusBody>}, TContext> => {
+
+const mutationKey = ['updatePlanStatus'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updatePlanStatus>>, {id: number;data: BodyType<UpdatePlanStatusBody>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updatePlanStatus(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdatePlanStatusMutationResult = NonNullable<Awaited<ReturnType<typeof updatePlanStatus>>>
+    export type UpdatePlanStatusMutationBody = BodyType<UpdatePlanStatusBody>
+    export type UpdatePlanStatusMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Set status tag on a plan
+ */
+export const useUpdatePlanStatus = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updatePlanStatus>>, TError,{id: number;data: BodyType<UpdatePlanStatusBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updatePlanStatus>>,
+        TError,
+        {id: number;data: BodyType<UpdatePlanStatusBody>},
+        TContext
+      > => {
+      return useMutation(getUpdatePlanStatusMutationOptions(options));
+    }
+
+export const getReorderDaysUrl = (id: number,) => {
+
+
+
+
+  return `/api/plans/${id}/reorder-days`
+}
+
+/**
+ * @summary Save new day order for a plan
+ */
+export const reorderDays = async (id: number,
+    reorderDaysBody: ReorderDaysBody, options?: RequestInit): Promise<TravelPlan> => {
+
+  return customFetch<TravelPlan>(getReorderDaysUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      reorderDaysBody,)
+  }
+);}
+
+
+
+
+export const getReorderDaysMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reorderDays>>, TError,{id: number;data: BodyType<ReorderDaysBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof reorderDays>>, TError,{id: number;data: BodyType<ReorderDaysBody>}, TContext> => {
+
+const mutationKey = ['reorderDays'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof reorderDays>>, {id: number;data: BodyType<ReorderDaysBody>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  reorderDays(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReorderDaysMutationResult = NonNullable<Awaited<ReturnType<typeof reorderDays>>>
+    export type ReorderDaysMutationBody = BodyType<ReorderDaysBody>
+    export type ReorderDaysMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Save new day order for a plan
+ */
+export const useReorderDays = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reorderDays>>, TError,{id: number;data: BodyType<ReorderDaysBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof reorderDays>>,
+        TError,
+        {id: number;data: BodyType<ReorderDaysBody>},
+        TContext
+      > => {
+      return useMutation(getReorderDaysMutationOptions(options));
+    }
+
+export const getReorderDestinationsUrl = (id: number,) => {
+
+
+
+
+  return `/api/plans/${id}/reorder-destinations`
+}
+
+/**
+ * @summary Reorder destinations within a day
+ */
+export const reorderDestinations = async (id: number,
+    reorderDestinationsBody: ReorderDestinationsBody, options?: RequestInit): Promise<TravelPlan> => {
+
+  return customFetch<TravelPlan>(getReorderDestinationsUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      reorderDestinationsBody,)
+  }
+);}
+
+
+
+
+export const getReorderDestinationsMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reorderDestinations>>, TError,{id: number;data: BodyType<ReorderDestinationsBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof reorderDestinations>>, TError,{id: number;data: BodyType<ReorderDestinationsBody>}, TContext> => {
+
+const mutationKey = ['reorderDestinations'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof reorderDestinations>>, {id: number;data: BodyType<ReorderDestinationsBody>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  reorderDestinations(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReorderDestinationsMutationResult = NonNullable<Awaited<ReturnType<typeof reorderDestinations>>>
+    export type ReorderDestinationsMutationBody = BodyType<ReorderDestinationsBody>
+    export type ReorderDestinationsMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Reorder destinations within a day
+ */
+export const useReorderDestinations = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reorderDestinations>>, TError,{id: number;data: BodyType<ReorderDestinationsBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof reorderDestinations>>,
+        TError,
+        {id: number;data: BodyType<ReorderDestinationsBody>},
+        TContext
+      > => {
+      return useMutation(getReorderDestinationsMutationOptions(options));
+    }
+
+export const getRemoveDestinationUrl = (id: number,) => {
+
+
+
+
+  return `/api/plans/${id}/remove-destination`
+}
+
+/**
+ * @summary Remove a destination from a day
+ */
+export const removeDestination = async (id: number,
+    removeDestinationBody: RemoveDestinationBody, options?: RequestInit): Promise<TravelPlan> => {
+
+  return customFetch<TravelPlan>(getRemoveDestinationUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      removeDestinationBody,)
+  }
+);}
+
+
+
+
+export const getRemoveDestinationMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removeDestination>>, TError,{id: number;data: BodyType<RemoveDestinationBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof removeDestination>>, TError,{id: number;data: BodyType<RemoveDestinationBody>}, TContext> => {
+
+const mutationKey = ['removeDestination'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof removeDestination>>, {id: number;data: BodyType<RemoveDestinationBody>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  removeDestination(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RemoveDestinationMutationResult = NonNullable<Awaited<ReturnType<typeof removeDestination>>>
+    export type RemoveDestinationMutationBody = BodyType<RemoveDestinationBody>
+    export type RemoveDestinationMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Remove a destination from a day
+ */
+export const useRemoveDestination = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removeDestination>>, TError,{id: number;data: BodyType<RemoveDestinationBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof removeDestination>>,
+        TError,
+        {id: number;data: BodyType<RemoveDestinationBody>},
+        TContext
+      > => {
+      return useMutation(getRemoveDestinationMutationOptions(options));
+    }
+
+export const getGetDestinationNoteUrl = (id: number,
+    dayIndex: number,
+    destIndex: number,) => {
+
+
+
+
+  return `/api/plans/${id}/destination-notes/${dayIndex}/${destIndex}`
+}
+
+/**
+ * @summary Get per-destination note
+ */
+export const getDestinationNote = async (id: number,
+    dayIndex: number,
+    destIndex: number, options?: RequestInit): Promise<DestinationNote> => {
+
+  return customFetch<DestinationNote>(getGetDestinationNoteUrl(id,dayIndex,destIndex),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetDestinationNoteQueryKey = (id: number,
+    dayIndex: number,
+    destIndex: number,) => {
+    return [
+    `/api/plans/${id}/destination-notes/${dayIndex}/${destIndex}`
+    ] as const;
+    }
+
+
+export const getGetDestinationNoteQueryOptions = <TData = Awaited<ReturnType<typeof getDestinationNote>>, TError = ErrorType<unknown>>(id: number,
+    dayIndex: number,
+    destIndex: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDestinationNote>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetDestinationNoteQueryKey(id,dayIndex,destIndex);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getDestinationNote>>> = ({ signal }) => getDestinationNote(id,dayIndex,destIndex, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id && dayIndex && destIndex), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDestinationNote>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetDestinationNoteQueryResult = NonNullable<Awaited<ReturnType<typeof getDestinationNote>>>
+export type GetDestinationNoteQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get per-destination note
+ */
+
+export function useGetDestinationNote<TData = Awaited<ReturnType<typeof getDestinationNote>>, TError = ErrorType<unknown>>(
+ id: number,
+    dayIndex: number,
+    destIndex: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDestinationNote>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetDestinationNoteQueryOptions(id,dayIndex,destIndex,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpsertDestinationNoteUrl = (id: number,
+    dayIndex: number,
+    destIndex: number,) => {
+
+
+
+
+  return `/api/plans/${id}/destination-notes/${dayIndex}/${destIndex}`
+}
+
+/**
+ * @summary Save per-destination note
+ */
+export const upsertDestinationNote = async (id: number,
+    dayIndex: number,
+    destIndex: number,
+    upsertDestinationNoteBody: UpsertDestinationNoteBody, options?: RequestInit): Promise<DestinationNote> => {
+
+  return customFetch<DestinationNote>(getUpsertDestinationNoteUrl(id,dayIndex,destIndex),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      upsertDestinationNoteBody,)
+  }
+);}
+
+
+
+
+export const getUpsertDestinationNoteMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof upsertDestinationNote>>, TError,{id: number;dayIndex: number;destIndex: number;data: BodyType<UpsertDestinationNoteBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof upsertDestinationNote>>, TError,{id: number;dayIndex: number;destIndex: number;data: BodyType<UpsertDestinationNoteBody>}, TContext> => {
+
+const mutationKey = ['upsertDestinationNote'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof upsertDestinationNote>>, {id: number;dayIndex: number;destIndex: number;data: BodyType<UpsertDestinationNoteBody>}> = (props) => {
+          const {id,dayIndex,destIndex,data} = props ?? {};
+
+          return  upsertDestinationNote(id,dayIndex,destIndex,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpsertDestinationNoteMutationResult = NonNullable<Awaited<ReturnType<typeof upsertDestinationNote>>>
+    export type UpsertDestinationNoteMutationBody = BodyType<UpsertDestinationNoteBody>
+    export type UpsertDestinationNoteMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Save per-destination note
+ */
+export const useUpsertDestinationNote = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof upsertDestinationNote>>, TError,{id: number;dayIndex: number;destIndex: number;data: BodyType<UpsertDestinationNoteBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof upsertDestinationNote>>,
+        TError,
+        {id: number;dayIndex: number;destIndex: number;data: BodyType<UpsertDestinationNoteBody>},
+        TContext
+      > => {
+      return useMutation(getUpsertDestinationNoteMutationOptions(options));
+    }
+
+export const getGetAllDestinationNotesUrl = (id: number,) => {
+
+
+
+
+  return `/api/plans/${id}/destination-notes`
+}
+
+/**
+ * @summary Get all destination notes for a plan
+ */
+export const getAllDestinationNotes = async (id: number, options?: RequestInit): Promise<DestinationNote[]> => {
+
+  return customFetch<DestinationNote[]>(getGetAllDestinationNotesUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAllDestinationNotesQueryKey = (id: number,) => {
+    return [
+    `/api/plans/${id}/destination-notes`
+    ] as const;
+    }
+
+
+export const getGetAllDestinationNotesQueryOptions = <TData = Awaited<ReturnType<typeof getAllDestinationNotes>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAllDestinationNotes>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAllDestinationNotesQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAllDestinationNotes>>> = ({ signal }) => getAllDestinationNotes(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAllDestinationNotes>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetAllDestinationNotesQueryResult = NonNullable<Awaited<ReturnType<typeof getAllDestinationNotes>>>
+export type GetAllDestinationNotesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get all destination notes for a plan
+ */
+
+export function useGetAllDestinationNotes<TData = Awaited<ReturnType<typeof getAllDestinationNotes>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAllDestinationNotes>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetAllDestinationNotesQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getRegeneratePlanUrl = (id: number,) => {
 
