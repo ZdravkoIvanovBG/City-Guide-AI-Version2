@@ -1,0 +1,96 @@
+Fix the layout of the transport option cards in the "Getting There"
+tab. The text content on the left side of each card is squishing
+into an extremely narrow column, wrapping every single word onto
+its own line, making it completely unreadable.
+
+## What is happening
+
+The card is using a flex or grid row layout where the left text
+column and the right duration value are siblings. The right side
+(duration) is not shrinking so it pushes the left text column
+into almost zero width, causing every word to wrap individually.
+
+## The fix
+
+Find the transport card component and apply these layout rules:
+
+### Card outer container
+- Display: flex, flex-direction: column
+- Do NOT use a side-by-side row layout for the main card content
+- Full width, no fixed widths on any child that would squeeze siblings
+
+### Card header row (mode label + duration)
+This is the only row that should be flex row with space-between:
+  display: flex
+  justify-content: space-between
+  align-items: center
+  gap: 1rem
+  width: 100%
+
+- Left side: mode icon + mode label (FLIGHT, TRAIN etc.)
+  min-width: 0
+  flex-shrink: 1
+
+- Right side: duration value
+  white-space: nowrap
+  flex-shrink: 0
+  flex: 0 0 auto
+  This prevents the duration from wrapping or shrinking, and
+  stops it from pushing the left side
+
+### All text content below the header
+Everything below the header row (summary, route, frequency,
+price, operators, tips, buttons) must be:
+  display: block
+  width: 100%
+  No flex children competing for width
+
+Specifically the summary/description paragraph must have:
+  width: 100%
+  min-width: 0
+  word-wrap: break-word
+  overflow-wrap: break-word
+  white-space: normal
+
+### Route line
+The route string ("Stara Zagora → Sofia Airport → Istanbul → Moscow")
+must be a full-width block element, not constrained to a narrow
+flex child. If it is currently inside a flex row, pull it out
+and make it its own block below the header.
+
+### Price range
+Full width block, not a flex sibling competing with other content.
+
+### Operators (pill tags)
+display: flex
+flex-wrap: wrap
+gap: 0.5rem
+This lets them wrap naturally to multiple rows if needed instead
+of squishing.
+
+### Tips
+Each tip is a full-width block row with the lightbulb icon
+inline at the start. Never a flex row where the icon takes
+space from the text.
+
+### Booking buttons
+display: flex
+flex-wrap: wrap
+gap: 0.75rem
+Buttons wrap to next line on narrow screens instead of squishing.
+
+## Mobile
+On screens under 640px:
+- The header row (mode + duration) can stay as space-between
+  but the duration moves below the mode label if needed:
+  flex-wrap: wrap
+- Everything else is already full-width blocks so no extra
+  mobile changes needed
+
+## Do not change
+- The card's dark background, border, padding, or colors
+- The amber price color
+- The disclaimer text at the bottom
+- The booking link behavior
+- Any of the Gemini data or content — this is purely a
+  CSS layout fix

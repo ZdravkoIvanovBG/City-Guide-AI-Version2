@@ -459,65 +459,71 @@ function RouteOptionCard({ option, isPrimary }: { option: RouteOption; isPrimary
     <motion.div
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`border p-6 space-y-4 ${isPrimary ? "border-primary/40 bg-primary/5" : "border-border bg-card"}`}
+      className={`border p-6 flex flex-col gap-4 ${isPrimary ? "border-primary/40 bg-primary/5" : "border-border bg-card"}`}
     >
-      {/* Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <span className="text-primary">{modeIcon(option.mode)}</span>
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">{modeLabel(option.mode)}</p>
-            <p className="text-base mt-0.5 leading-snug">{option.summary}</p>
-          </div>
+      {/* Header row: mode badge (left) + duration (right) — the ONLY flex-row in the card */}
+      <div className="flex items-center justify-between gap-4 flex-wrap w-full">
+        <div className="flex items-center gap-2 min-w-0 flex-shrink-1">
+          <span className="text-primary shrink-0">{modeIcon(option.mode)}</span>
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">{modeLabel(option.mode)}</p>
         </div>
         {option.duration && (
-          <span className="font-serif text-3xl text-primary shrink-0 leading-none">{option.duration}</span>
+          <span className="font-serif text-3xl text-primary leading-none whitespace-nowrap flex-shrink-0">
+            {option.duration}
+          </span>
         )}
       </div>
 
-      {/* Details row */}
+      {/* Summary — full width block below the header */}
+      <p className="text-base leading-snug w-full break-words">{option.summary}</p>
+
+      {/* Details — frequency + route/stops, full width */}
       {(option.frequency || option.route || option.stops) && (
-        <div className="space-y-1 text-sm text-muted-foreground">
+        <div className="space-y-1 text-sm text-muted-foreground w-full">
           {option.frequency && <p>{option.frequency}</p>}
-          {option.route && <p className="font-mono text-xs">{option.route}{option.stops ? ` · ${option.stops}` : ""}</p>}
+          {option.route && (
+            <p className="font-mono text-xs break-all">
+              {option.route}{option.stops ? ` · ${option.stops}` : ""}
+            </p>
+          )}
         </div>
       )}
 
-      {/* Price + operators */}
-      <div className="flex flex-wrap items-center gap-4">
-        {price && (
-          <div>
-            <p className="text-xs text-muted-foreground uppercase tracking-widest mb-0.5">Estimated price</p>
-            <p className="text-amber-400 font-medium">
-              {price.currency} {price.low.toLocaleString()} – {price.high.toLocaleString()}
-            </p>
-            {price.note && <p className="text-xs text-muted-foreground/60 mt-0.5">{price.note}</p>}
-          </div>
-        )}
-        {option.operators && option.operators.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
-            {option.operators.map((op, i) => (
-              <span key={i} className="text-xs border border-border/60 px-2 py-0.5 text-muted-foreground">{op}</span>
-            ))}
-          </div>
-        )}
-      </div>
+      {/* Price — full width block */}
+      {price && (
+        <div className="w-full">
+          <p className="text-xs text-muted-foreground uppercase tracking-widest mb-0.5">Estimated price</p>
+          <p className="text-amber-400 font-medium">
+            {price.currency} {price.low.toLocaleString()} – {price.high.toLocaleString()}
+          </p>
+          {price.note && <p className="text-xs text-muted-foreground/60 mt-0.5">{price.note}</p>}
+        </div>
+      )}
 
-      {/* Tips */}
+      {/* Operators — wrapping pills, full width */}
+      {option.operators && option.operators.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 w-full">
+          {option.operators.map((op, i) => (
+            <span key={i} className="text-xs border border-border/60 px-2 py-0.5 text-muted-foreground">{op}</span>
+          ))}
+        </div>
+      )}
+
+      {/* Tips — each is a full-width row with icon inline */}
       {option.tips && option.tips.length > 0 && (
-        <div className="space-y-1.5">
+        <div className="space-y-1.5 w-full">
           {option.tips.map((tip, i) => (
-            <div key={i} className="flex gap-2 text-sm text-muted-foreground">
+            <div key={i} className="flex gap-2 text-sm text-muted-foreground w-full">
               <Lightbulb className="w-4 h-4 text-amber-400/70 shrink-0 mt-0.5" />
-              <span>{tip}</span>
+              <span className="min-w-0 break-words">{tip}</span>
             </div>
           ))}
         </div>
       )}
 
-      {/* Booking links */}
+      {/* Booking links — wrapping row */}
       {option.bookingLinks && option.bookingLinks.length > 0 && (
-        <div className="flex flex-wrap gap-2 pt-2 border-t border-border/40">
+        <div className="flex flex-wrap gap-3 pt-2 border-t border-border/40 w-full">
           {option.bookingLinks.map((link, i) => (
             <a
               key={i}
