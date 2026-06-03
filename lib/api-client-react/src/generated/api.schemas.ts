@@ -34,6 +34,10 @@ export interface UserProfile {
   avatarUrl?: string | null;
   /** @nullable */
   bio?: string | null;
+  /** @nullable */
+  homeCity?: string | null;
+  /** @nullable */
+  homeCountry?: string | null;
   createdAt: string;
 }
 
@@ -50,6 +54,10 @@ export interface ProfileUpdate {
   bio?: string | null;
   /** @minLength 8 */
   password?: string;
+  /** @nullable */
+  homeCity?: string | null;
+  /** @nullable */
+  homeCountry?: string | null;
 }
 
 export interface AvatarInput {
@@ -310,6 +318,51 @@ export interface DayWeather {
   chanceOfRain: number;
   windSpeed: number;
   isHistorical?: boolean;
+}
+
+export interface RouteSearchBody {
+  originCity: string;
+  originCountry: string;
+  destinationCity: string;
+  destinationCountry: string;
+  startDate: string;
+  endDate: string;
+}
+
+export interface PriceRange {
+  low: number;
+  high: number;
+  currency: string;
+  /** @nullable */
+  note?: string | null;
+}
+
+export interface BookingLink {
+  platform: string;
+  url: string;
+  label: string;
+}
+
+export interface RouteOption {
+  mode: string;
+  available: boolean;
+  summary: string;
+  /** @nullable */
+  duration?: string | null;
+  /** @nullable */
+  frequency?: string | null;
+  priceRange?: PriceRange | null;
+  operators?: string[];
+  /** @nullable */
+  route?: string | null;
+  /** @nullable */
+  stops?: string | null;
+  tips?: string[];
+  bookingLinks?: BookingLink[];
+}
+
+export interface RouteSearchResponse {
+  options: RouteOption[];
 }
 
 export type GetCityAutocompleteParams = {

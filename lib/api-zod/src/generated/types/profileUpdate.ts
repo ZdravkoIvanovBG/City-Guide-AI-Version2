@@ -14,4 +14,8 @@ export interface ProfileUpdate {
   bio?: string | null;
   /** @minLength 8 */
   password?: string;
+  /** @nullable */
+  homeCity?: string | null;
+  /** @nullable */
+  homeCountry?: string | null;
 }

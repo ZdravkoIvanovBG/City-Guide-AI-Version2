@@ -58,6 +58,8 @@ router.get("/profile", requireAuth, async (req: AuthRequest, res): Promise<void>
     email: user.email,
     avatarUrl: user.avatarUrl ?? null,
     bio: user.bio ?? null,
+    homeCity: user.homeCity ?? null,
+    homeCountry: user.homeCountry ?? null,
     createdAt: user.createdAt.toISOString(),
   });
 });
@@ -69,13 +71,18 @@ router.patch("/profile", requireAuth, async (req: AuthRequest, res): Promise<voi
     return;
   }
 
-  const { name, email, bio, password } = parsed.data;
+  const { name, email, bio, password, homeCity, homeCountry } = parsed.data as {
+    name?: string; email?: string; bio?: string | null; password?: string;
+    homeCity?: string | null; homeCountry?: string | null;
+  };
   const updates: Partial<typeof usersTable.$inferInsert> = {};
 
   if (name != null) updates.name = name;
   if (email != null) updates.email = email;
   if (bio !== undefined) updates.bio = bio ?? undefined;
   if (password != null) updates.passwordHash = await bcrypt.hash(password, 12);
+  if (homeCity !== undefined) updates.homeCity = homeCity ?? undefined;
+  if (homeCountry !== undefined) updates.homeCountry = homeCountry ?? undefined;
 
   if (Object.keys(updates).length === 0) {
     const [user] = await db
@@ -89,6 +96,8 @@ router.patch("/profile", requireAuth, async (req: AuthRequest, res): Promise<voi
       email: user.email,
       avatarUrl: user.avatarUrl ?? null,
       bio: user.bio ?? null,
+      homeCity: user.homeCity ?? null,
+      homeCountry: user.homeCountry ?? null,
       createdAt: user.createdAt.toISOString(),
     });
     return;
@@ -106,6 +115,8 @@ router.patch("/profile", requireAuth, async (req: AuthRequest, res): Promise<voi
     email: updated.email,
     avatarUrl: updated.avatarUrl ?? null,
     bio: updated.bio ?? null,
+    homeCity: updated.homeCity ?? null,
+    homeCountry: updated.homeCountry ?? null,
     createdAt: updated.createdAt.toISOString(),
   });
 });
@@ -135,6 +146,8 @@ router.post("/profile/avatar", requireAuth, async (req: AuthRequest, res): Promi
     email: updated.email,
     avatarUrl: updated.avatarUrl ?? null,
     bio: updated.bio ?? null,
+    homeCity: updated.homeCity ?? null,
+    homeCountry: updated.homeCountry ?? null,
     createdAt: updated.createdAt.toISOString(),
   });
 });

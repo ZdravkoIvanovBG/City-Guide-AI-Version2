@@ -8,6 +8,7 @@
 
 export * from './authResult';
 export * from './avatarInput';
+export * from './bookingLink';
 export * from './budgetDay';
 export * from './budgetEstimate';
 export * from './budgetLine';
@@ -35,9 +36,13 @@ export * from './photoResult';
 export * from './planDay';
 export * from './planInput';
 export * from './planSummary';
+export * from './priceRange';
 export * from './profileUpdate';
 export * from './registerInput';
 export * from './restaurant';
+export * from './routeOption';
+export * from './routeSearchBody';
+export * from './routeSearchResponse';
 export * from './transportMode';
 export * from './travelPlan';
 export * from './travelStats';

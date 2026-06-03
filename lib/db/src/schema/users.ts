@@ -9,6 +9,8 @@ export const usersTable = pgTable("users", {
   passwordHash: text("password_hash").notNull(),
   avatarUrl: text("avatar_url"),
   bio: text("bio"),
+  homeCity: text("home_city"),
+  homeCountry: text("home_country"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

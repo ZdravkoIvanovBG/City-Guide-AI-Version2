@@ -1,26 +1,121 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/lib/auth";
 import { Navbar } from "@/components/layout/navbar";
 import { PlanCard } from "@/components/plan-card";
+import { useToast } from "@/hooks/use-toast";
 import { 
   useGetProfile, 
+  useUpdateProfile,
   useGetTravelStats, 
   useGetPlans,
+  useGetCityAutocomplete,
   getGetProfileQueryKey,
   getGetTravelStatsQueryKey,
-  getGetPlansQueryKey
+  getGetPlansQueryKey,
+  getGetCityAutocompleteQueryKey,
+  CityOption,
 } from "@workspace/api-client-react";
-import { Globe, Map, Calendar, Navigation } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { Globe, Map, Calendar, Navigation, Edit2, Check, X, MapPin, Search } from "lucide-react";
 
 const TravelGlobe = lazy(() =>
   import("@/components/travel-globe").then((m) => ({ default: m.TravelGlobe }))
 );
 
+function HomeCityInput({ value, country, onSelect }: {
+  value: string;
+  country: string;
+  onSelect: (city: string, country: string) => void;
+}) {
+  const [query, setQuery] = useState(value ? `${value}${country ? ", " + country : ""}` : "");
+  const [debounced, setDebounced] = useState("");
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => { setQuery(value ? `${value}${country ? ", " + country : ""}` : ""); }, [value, country]);
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(query), 400);
+    return () => clearTimeout(t);
+  }, [query]);
+
+  useEffect(() => {
+    const fn = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", fn);
+    return () => document.removeEventListener("mousedown", fn);
+  }, []);
+
+  const { data: suggestions, isLoading } = useGetCityAutocomplete(
+    { q: debounced },
+    { query: { enabled: debounced.length > 1, queryKey: getGetCityAutocompleteQueryKey({ q: debounced }) } }
+  );
+
+  return (
+    <div className="relative" ref={containerRef}>
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <input
+          type="text"
+          value={query}
+          placeholder="Where are you based?"
+          onChange={e => { setQuery(e.target.value); setOpen(true); }}
+          onFocus={() => setOpen(true)}
+          className="w-full pl-9 pr-4 py-2.5 bg-background border border-border/60 text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:border-primary transition-colors"
+        />
+      </div>
+      <AnimatePresence>
+        {open && query.length > 1 && (
+          <motion.div
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 4 }}
+            className="absolute top-full mt-1 w-full bg-card border border-border z-50 shadow-xl max-h-48 overflow-y-auto"
+          >
+            {isLoading ? (
+              <p className="p-3 text-sm text-muted-foreground text-center">Searching…</p>
+            ) : suggestions && suggestions.length > 0 ? (
+              <ul>
+                {suggestions.map((city: CityOption, i: number) => (
+                  <li key={i}>
+                    <button
+                      type="button"
+                      onClick={() => { onSelect(city.city, city.country); setQuery(`${city.city}, ${city.country}`); setOpen(false); }}
+                      className="w-full text-left px-4 py-3 hover:bg-muted/50 flex items-center gap-3 transition-colors text-sm"
+                    >
+                      <MapPin className="w-3.5 h-3.5 text-primary shrink-0" />
+                      <div>
+                        <span className="font-medium">{city.city}</span>
+                        <span className="text-muted-foreground ml-1.5">{city.country}</span>
+                      </div>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="p-3 text-sm text-muted-foreground text-center">No cities found</p>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 export default function Profile() {
   const [, setLocation] = useLocation();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [formName, setFormName] = useState("");
+  const [formBio, setFormBio] = useState("");
+  const [formHomeCity, setFormHomeCity] = useState("");
+  const [formHomeCountry, setFormHomeCountry] = useState("");
   
   const { data: profile, isLoading: profileLoading } = useGetProfile({
     query: {
@@ -42,6 +137,49 @@ export default function Profile() {
       queryKey: getGetPlansQueryKey()
     }
   });
+
+  const { mutate: updateProfile, isPending: isUpdating } = useUpdateProfile({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getGetProfileQueryKey() });
+        setIsEditing(false);
+        toast({ title: "Profile updated", description: "Your changes have been saved." });
+      },
+      onError: () => {
+        toast({ title: "Update failed", description: "Please try again.", variant: "destructive" });
+      }
+    }
+  });
+
+  useEffect(() => {
+    if (profile && !isEditing) {
+      setFormName(profile.name ?? "");
+      setFormBio(profile.bio ?? "");
+      setFormHomeCity(profile.homeCity ?? "");
+      setFormHomeCountry(profile.homeCountry ?? "");
+    }
+  }, [profile, isEditing]);
+
+  const handleSave = () => {
+    updateProfile({
+      data: {
+        name: formName || undefined,
+        bio: formBio || null,
+        homeCity: formHomeCity || null,
+        homeCountry: formHomeCountry || null,
+      }
+    });
+  };
+
+  const handleCancel = () => {
+    setIsEditing(false);
+    if (profile) {
+      setFormName(profile.name ?? "");
+      setFormBio(profile.bio ?? "");
+      setFormHomeCity(profile.homeCity ?? "");
+      setFormHomeCountry(profile.homeCountry ?? "");
+    }
+  };
 
   if (authLoading || profileLoading || statsLoading || plansLoading) {
     return (
@@ -87,13 +225,80 @@ export default function Profile() {
               )}
             </div>
             <div className="text-center md:text-left flex-1">
-              <h1 className="font-serif text-5xl md:text-6xl mb-2">{profile.name}</h1>
-              <p className="text-muted-foreground text-lg font-light max-w-xl">
-                {profile.bio || "Wandering the globe, one city at a time."}
-              </p>
-              <p className="text-xs text-muted-foreground/60 uppercase tracking-widest mt-4">
-                Explorer since {new Date(profile.createdAt).getFullYear()}
-              </p>
+              {isEditing ? (
+                <div className="space-y-4 max-w-md">
+                  <div>
+                    <label className="text-xs text-muted-foreground uppercase tracking-widest block mb-1.5">Name</label>
+                    <input
+                      value={formName}
+                      onChange={e => setFormName(e.target.value)}
+                      className="w-full bg-background border border-border/60 px-3 py-2.5 text-lg focus:outline-none focus:border-primary transition-colors"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground uppercase tracking-widest block mb-1.5">Bio</label>
+                    <textarea
+                      value={formBio}
+                      onChange={e => setFormBio(e.target.value)}
+                      rows={2}
+                      placeholder="Wandering the globe, one city at a time."
+                      className="w-full bg-background border border-border/60 px-3 py-2.5 text-sm resize-none focus:outline-none focus:border-primary transition-colors placeholder:text-muted-foreground/50"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground uppercase tracking-widest block mb-1.5">
+                      Home city <span className="normal-case text-muted-foreground/50">— used to pre-fill departure on travel plans</span>
+                    </label>
+                    <HomeCityInput
+                      value={formHomeCity}
+                      country={formHomeCountry}
+                      onSelect={(city, country) => { setFormHomeCity(city); setFormHomeCountry(country); }}
+                    />
+                  </div>
+                  <div className="flex items-center gap-3 pt-1">
+                    <button
+                      onClick={handleSave}
+                      disabled={isUpdating}
+                      className="flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2 text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
+                    >
+                      <Check className="w-4 h-4" />
+                      {isUpdating ? "Saving…" : "Save"}
+                    </button>
+                    <button
+                      onClick={handleCancel}
+                      className="flex items-center gap-2 border border-border px-5 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <h1 className="font-serif text-5xl md:text-6xl mb-2">{profile.name}</h1>
+                  <p className="text-muted-foreground text-lg font-light max-w-xl">
+                    {profile.bio || "Wandering the globe, one city at a time."}
+                  </p>
+                  {profile.homeCity && (
+                    <p className="text-sm text-muted-foreground/70 mt-2 flex items-center gap-1.5">
+                      <MapPin className="w-3.5 h-3.5 text-primary" />
+                      Based in {profile.homeCity}{profile.homeCountry ? `, ${profile.homeCountry}` : ""}
+                    </p>
+                  )}
+                  <div className="flex items-center gap-4 mt-4">
+                    <p className="text-xs text-muted-foreground/60 uppercase tracking-widest">
+                      Explorer since {new Date(profile.createdAt).getFullYear()}
+                    </p>
+                    <button
+                      onClick={() => setIsEditing(true)}
+                      className="flex items-center gap-1.5 text-xs text-muted-foreground/50 hover:text-primary transition-colors uppercase tracking-widest"
+                    >
+                      <Edit2 className="w-3 h-3" />
+                      Edit profile
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
 

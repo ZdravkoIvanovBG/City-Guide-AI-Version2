@@ -18,6 +18,8 @@ tags:
     description: Travel plan generation and management
   - name: profile
     description: User profile and stats
+  - name: routes
+    description: Travel route options between cities
 
 paths:
   /healthz:
@@ -436,6 +438,37 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /routes/search:
+    post:
+      operationId: searchRoutes
+      tags: [routes]
+      summary: Get AI-generated transport options between two cities
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RouteSearchBody"
+      responses:
+        "200":
+          description: Route options
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RouteSearchResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /cities/photo:
     get:
       operationId: getCityPhoto
@@ -519,6 +552,10 @@ components:
           type: ["string", "null"]
         bio:
           type: ["string", "null"]
+        homeCity:
+          type: ["string", "null"]
+        homeCountry:
+          type: ["string", "null"]
         createdAt:
           type: string
 
@@ -536,6 +573,10 @@ components:
         password:
           type: string
           minLength: 8
+        homeCity:
+          type: ["string", "null"]
+        homeCountry:
+          type: ["string", "null"]
 
     AvatarInput:
       type: object
@@ -849,6 +890,91 @@ components:
           type: ["string", "null"]
         mapsUrl:
           type: ["string", "null"]
+
+    RouteSearchBody:
+      type: object
+      required: [originCity, originCountry, destinationCity, destinationCountry, startDate, endDate]
+      properties:
+        originCity:
+          type: string
+        originCountry:
+          type: string
+        destinationCity:
+          type: string
+        destinationCountry:
+          type: string
+        startDate:
+          type: string
+        endDate:
+          type: string
+
+    RouteSearchResponse:
+      type: object
+      required: [options]
+      properties:
+        options:
+          type: array
+          items:
+            $ref: "#/components/schemas/RouteOption"
+
+    PriceRange:
+      type: object
+      required: [low, high, currency]
+      properties:
+        low:
+          type: number
+        high:
+          type: number
+        currency:
+          type: string
+        note:
+          type: ["string", "null"]
+
+    BookingLink:
+      type: object
+      required: [platform, url, label]
+      properties:
+        platform:
+          type: string
+        url:
+          type: string
+        label:
+          type: string
+
+    RouteOption:
+      type: object
+      required: [mode, available, summary]
+      properties:
+        mode:
+          type: string
+        available:
+          type: boolean
+        summary:
+          type: string
+        duration:
+          type: ["string", "null"]
+        frequency:
+          type: ["string", "null"]
+        priceRange:
+          oneOf:
+            - $ref: "#/components/schemas/PriceRange"
+            - type: "null"
+        operators:
+          type: array
+          items:
+            type: string
+        route:
+          type: ["string", "null"]
+        stops:
+          type: ["string", "null"]
+        tips:
+          type: array
+          items:
+            type: string
+        bookingLinks:
+          type: array
+          items:
+            $ref: "#/components/schemas/BookingLink"
 
     MiscEvent:
       type: object

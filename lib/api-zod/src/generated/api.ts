@@ -47,6 +47,8 @@ export const LoginResponse = zod.object({
   "email": zod.string(),
   "avatarUrl": zod.string().nullish(),
   "bio": zod.string().nullish(),
+  "homeCity": zod.string().nullish(),
+  "homeCountry": zod.string().nullish(),
   "createdAt": zod.string()
 })
 })
@@ -63,6 +65,8 @@ export const RefreshTokenResponse = zod.object({
   "email": zod.string(),
   "avatarUrl": zod.string().nullish(),
   "bio": zod.string().nullish(),
+  "homeCity": zod.string().nullish(),
+  "homeCountry": zod.string().nullish(),
   "createdAt": zod.string()
 })
 })
@@ -617,6 +621,8 @@ export const GetProfileResponse = zod.object({
   "email": zod.string(),
   "avatarUrl": zod.string().nullish(),
   "bio": zod.string().nullish(),
+  "homeCity": zod.string().nullish(),
+  "homeCountry": zod.string().nullish(),
   "createdAt": zod.string()
 })
 
@@ -633,7 +639,9 @@ export const UpdateProfileBody = zod.object({
   "name": zod.string().min(1).optional(),
   "email": zod.string().email().optional(),
   "bio": zod.string().nullish(),
-  "password": zod.string().min(updateProfileBodyPasswordMin).optional()
+  "password": zod.string().min(updateProfileBodyPasswordMin).optional(),
+  "homeCity": zod.string().nullish(),
+  "homeCountry": zod.string().nullish()
 })
 
 export const UpdateProfileResponse = zod.object({
@@ -642,6 +650,8 @@ export const UpdateProfileResponse = zod.object({
   "email": zod.string(),
   "avatarUrl": zod.string().nullish(),
   "bio": zod.string().nullish(),
+  "homeCity": zod.string().nullish(),
+  "homeCountry": zod.string().nullish(),
   "createdAt": zod.string()
 })
 
@@ -659,6 +669,8 @@ export const UploadAvatarResponse = zod.object({
   "email": zod.string(),
   "avatarUrl": zod.string().nullish(),
   "bio": zod.string().nullish(),
+  "homeCity": zod.string().nullish(),
+  "homeCountry": zod.string().nullish(),
   "createdAt": zod.string()
 })
 
@@ -676,6 +688,44 @@ export const GetTravelStatsResponse = zod.object({
   "country": zod.string(),
   "lat": zod.number(),
   "lng": zod.number()
+}))
+})
+
+
+/**
+ * @summary Get AI-generated transport options between two cities
+ */
+export const SearchRoutesBody = zod.object({
+  "originCity": zod.string(),
+  "originCountry": zod.string(),
+  "destinationCity": zod.string(),
+  "destinationCountry": zod.string(),
+  "startDate": zod.string(),
+  "endDate": zod.string()
+})
+
+export const SearchRoutesResponse = zod.object({
+  "options": zod.array(zod.object({
+  "mode": zod.string(),
+  "available": zod.boolean(),
+  "summary": zod.string(),
+  "duration": zod.string().nullish(),
+  "frequency": zod.string().nullish(),
+  "priceRange": zod.union([zod.object({
+  "low": zod.number(),
+  "high": zod.number(),
+  "currency": zod.string(),
+  "note": zod.string().nullish()
+}),zod.null()]).optional(),
+  "operators": zod.array(zod.string()).optional(),
+  "route": zod.string().nullish(),
+  "stops": zod.string().nullish(),
+  "tips": zod.array(zod.string()).optional(),
+  "bookingLinks": zod.array(zod.object({
+  "platform": zod.string(),
+  "url": zod.string(),
+  "label": zod.string()
+})).optional()
 }))
 })
 

@@ -14,5 +14,9 @@ export interface UserProfile {
   avatarUrl?: string | null;
   /** @nullable */
   bio?: string | null;
+  /** @nullable */
+  homeCity?: string | null;
+  /** @nullable */
+  homeCountry?: string | null;
   createdAt: string;
 }

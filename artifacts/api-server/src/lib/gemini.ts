@@ -184,6 +184,82 @@ interface TripChecklistRaw {
   categories: ChecklistCategoryRaw[];
 }
 
+interface RouteOptionRaw {
+  mode: string;
+  available: boolean;
+  summary: string;
+  duration?: string | null;
+  frequency?: string | null;
+  priceRange?: { low: number; high: number; currency: string; note?: string | null } | null;
+  operators?: string[];
+  route?: string | null;
+  stops?: string | null;
+  tips?: string[];
+  bookingLinks?: { platform: string; url: string; label: string }[];
+}
+
+export async function generateRouteOptions(
+  originCity: string,
+  originCountry: string,
+  destinationCity: string,
+  destinationCountry: string,
+  startDate: string,
+  endDate: string,
+): Promise<RouteOptionRaw[]> {
+  const prompt = `The user wants to travel from ${originCity}, ${originCountry} to ${destinationCity}, ${destinationCountry}. Their travel dates are ${startDate} to ${endDate}.
+
+Return a JSON array of all realistic transport options between these two cities. For each option include:
+{
+  "mode": "flight" | "train" | "bus" | "ferry" | "drive",
+  "available": true | false,
+  "summary": "Direct flight, ~2h 10min",
+  "duration": "2h 10min",
+  "frequency": "Multiple daily departures",
+  "priceRange": {
+    "low": 89,
+    "high": 320,
+    "currency": "EUR",
+    "note": "Prices vary by airline and booking time"
+  },
+  "operators": ["Ryanair", "Vueling", "EasyJet"],
+  "route": "JFK / EWR → BCN",
+  "stops": "Direct or 1 stop via Madrid",
+  "tips": [
+    "Book 6–8 weeks in advance for best prices",
+    "Check both JFK and Newark airports for cheaper options"
+  ],
+  "bookingLinks": [
+    {
+      "platform": "Google Flights",
+      "url": "https://www.google.com/travel/flights?q=flights+from+${encodeURIComponent(originCity)}+to+${encodeURIComponent(destinationCity)}",
+      "label": "Search on Google Flights"
+    }
+  ]
+}
+
+Rules:
+- Only include modes where available: true if the route is genuinely possible. Do not invent unrealistic options (e.g. no ferry between New York and Barcelona).
+- IMPORTANT — handle cities without direct transport hubs: If the origin city does not have its own airport, train station, or bus terminal that serves the required route, automatically factor in the journey to the nearest relevant hub city. The summary and route fields must reflect the full journey including the first leg.
+- For flights: always include if any airport serves either city or is within reasonable reach (under ~3 hours travel).
+- For trains: include if a direct or connecting rail route exists between the two cities or countries.
+- For buses: include only if long-distance coach services realistically operate this route.
+- For ferry: include only if a genuine ferry route exists.
+- For drive: include if the cities are on the same landmass and within roughly 1500km.
+- Price ranges should reflect realistic market rates.
+- operators should list real airlines / train operators / bus companies that serve this route.
+- Always include a Google Flights or Rome2rio booking link. For trains include Omio or Trainline.
+- Return ONLY the JSON array. No markdown, no preamble.`;
+
+  try {
+    const raw = await callGemini(prompt);
+    const match = raw.match(/\[[\s\S]*\]/);
+    if (!match) return [];
+    return JSON.parse(match[0]) as RouteOptionRaw[];
+  } catch {
+    return [];
+  }
+}
+
 export async function generateTravelPlan(params: {
   city: string;
   country: string;

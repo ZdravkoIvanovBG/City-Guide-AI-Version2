@@ -36,6 +36,13 @@ export const weatherCacheTable = pgTable("weather_cache", {
   fetchedAt: timestamp("fetched_at").notNull().defaultNow(),
 });
 
+export const routeCacheTable = pgTable("route_cache", {
+  id: serial("id").primaryKey(),
+  cacheKey: text("cache_key").notNull().unique(),
+  data: jsonb("data").notNull(),
+  fetchedAt: timestamp("fetched_at").notNull().defaultNow(),
+});
+
 export type Plan = typeof plansTable.$inferSelect;
 export type PhotoCache = typeof photoCacheTable.$inferSelect;
 export type WeatherCache = typeof weatherCacheTable.$inferSelect;

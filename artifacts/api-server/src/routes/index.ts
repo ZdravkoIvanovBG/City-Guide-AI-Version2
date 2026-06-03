@@ -5,6 +5,7 @@ import citiesRouter from "./cities";
 import plansRouter from "./plans";
 import profileRouter from "./profile";
 import weatherRouter from "./weather";
+import routesRouter from "./routes";
 
 const router: IRouter = Router();
 
@@ -14,5 +15,6 @@ router.use(citiesRouter);
 router.use(plansRouter);
 router.use(profileRouter);
 router.use(weatherRouter);
+router.use(routesRouter);
 
 export default router;

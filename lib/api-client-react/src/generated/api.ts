@@ -36,6 +36,8 @@ import type {
   PlanSummary,
   ProfileUpdate,
   RegisterInput,
+  RouteSearchBody,
+  RouteSearchResponse,
   TravelPlan,
   TravelStats,
   UserProfile
@@ -1394,6 +1396,77 @@ export function useGetTravelStats<TData = Awaited<ReturnType<typeof getTravelSta
 
 
 
+
+export const getSearchRoutesUrl = () => {
+
+
+
+
+  return `/api/routes/search`
+}
+
+/**
+ * @summary Get AI-generated transport options between two cities
+ */
+export const searchRoutes = async (routeSearchBody: RouteSearchBody, options?: RequestInit): Promise<RouteSearchResponse> => {
+
+  return customFetch<RouteSearchResponse>(getSearchRoutesUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      routeSearchBody,)
+  }
+);}
+
+
+
+
+export const getSearchRoutesMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof searchRoutes>>, TError,{data: BodyType<RouteSearchBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof searchRoutes>>, TError,{data: BodyType<RouteSearchBody>}, TContext> => {
+
+const mutationKey = ['searchRoutes'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof searchRoutes>>, {data: BodyType<RouteSearchBody>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  searchRoutes(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SearchRoutesMutationResult = NonNullable<Awaited<ReturnType<typeof searchRoutes>>>
+    export type SearchRoutesMutationBody = BodyType<RouteSearchBody>
+    export type SearchRoutesMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Get AI-generated transport options between two cities
+ */
+export const useSearchRoutes = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof searchRoutes>>, TError,{data: BodyType<RouteSearchBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof searchRoutes>>,
+        TError,
+        {data: BodyType<RouteSearchBody>},
+        TContext
+      > => {
+      return useMutation(getSearchRoutesMutationOptions(options));
+    }
 
 export const getGetCityPhotoUrl = (params: GetCityPhotoParams,) => {
   const normalizedParams = new URLSearchParams();

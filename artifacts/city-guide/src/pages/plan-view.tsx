@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useRoute } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
@@ -6,6 +6,11 @@ import {
   useGetPlan, 
   getGetPlanQueryKey,
   useGetWeather,
+  useGetProfile,
+  useSearchRoutes,
+  useGetCityAutocomplete,
+  getGetProfileQueryKey,
+  getGetCityAutocompleteQueryKey,
   TravelPlan,
   PlanDay,
   Destination,
@@ -21,12 +26,15 @@ import {
   TripChecklist,
   ChecklistCategory,
   ChecklistItem,
+  RouteOption,
+  CityOption,
 } from "@workspace/api-client-react";
 import { Navbar } from "@/components/layout/navbar";
 import {
   MapPin, Clock, Info, ExternalLink, Share2, Download,
   Footprints, Bus, Train, TramFront, Car, Bike, InfoIcon,
   ChevronDown, Package, Wallet, ClipboardList,
+  Plane, Ship, Lightbulb, ArrowRight, Search,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -88,7 +96,7 @@ const MODE_CONFIG: Record<string, ModeConfig> = {
   },
 };
 
-const MODE_ORDER = ["walking", "bus", "subway", "tram", "taxi", "bicycle"];
+const TRANSPORT_MODE_ORDER = ["walking", "bus", "subway", "tram", "taxi", "bicycle"];
 
 // Handles both legacy string format and new object format from DB
 function parseMode(raw: unknown): (TransportMode & { available: true }) | null {
@@ -146,7 +154,7 @@ function TransportDetail({ info }: { info: TransportMode & { available: true } }
 function TransportSection({ howToGetThere }: { howToGetThere: Destination["howToGetThere"] }) {
   const raw = howToGetThere as unknown as Record<string, unknown> | undefined;
 
-  const available = MODE_ORDER.flatMap((mode) => {
+  const available = TRANSPORT_MODE_ORDER.flatMap((mode) => {
     if (!raw || !(mode in raw)) return [];
     const info = parseMode(raw[mode]);
     return info ? [{ mode, info }] : [];
@@ -365,20 +373,24 @@ export default function PlanView() {
 
       {/* Content */}
       <main className="flex-1 relative z-10 container mx-auto px-6 py-12">
-        <Tabs defaultValue="itinerary" className="w-full">
+        <Tabs defaultValue="getting-there" className="w-full">
           <div className="sticky top-20 z-40 bg-background/90 backdrop-blur-md pt-4 pb-4 border-b border-border/50 mb-12">
             <TabsList className="bg-transparent h-auto p-0 flex gap-8 border-none justify-start overflow-x-auto">
-              {["itinerary", "hotels", "restaurants", "misc", "before-you-go"].map((tab) => (
+              {["getting-there", "itinerary", "hotels", "restaurants", "misc", "before-you-go"].map((tab) => (
                 <TabsTrigger
                   key={tab}
                   value={tab}
-                  className="font-serif text-xl md:text-2xl data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none border-b-2 border-transparent data-[state=active]:border-primary rounded-none pb-2 px-0 capitalize"
+                  className="font-serif text-xl md:text-2xl data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none border-b-2 border-transparent data-[state=active]:border-primary rounded-none pb-2 px-0 capitalize whitespace-nowrap"
                 >
-                  {tab === "misc" ? "Bonus Activities" : tab === "restaurants" ? "Dining" : tab === "before-you-go" ? "Before You Go" : tab.charAt(0).toUpperCase() + tab.slice(1)}
+                  {tab === "getting-there" ? "Getting There" : tab === "misc" ? "Bonus Activities" : tab === "restaurants" ? "Dining" : tab === "before-you-go" ? "Before You Go" : tab.charAt(0).toUpperCase() + tab.slice(1)}
                 </TabsTrigger>
               ))}
             </TabsList>
           </div>
+
+          <TabsContent value="getting-there" className="mt-0 outline-none">
+            <GettingThereTab plan={plan} />
+          </TabsContent>
 
           <TabsContent value="itinerary" className="space-y-24 mt-0 outline-none">
             {plan.days.map((day, idx) => (
@@ -418,6 +430,374 @@ export default function PlanView() {
           </TabsContent>
         </Tabs>
       </main>
+    </div>
+  );
+}
+
+// ── Getting There ────────────────────────────────────────────────────────────
+
+const ROUTE_MODE_ORDER = ["flight", "train", "bus", "ferry", "drive"] as const;
+
+function modeIcon(mode: string) {
+  switch (mode.toLowerCase()) {
+    case "flight": return <Plane className="w-5 h-5" />;
+    case "train": return <Train className="w-5 h-5" />;
+    case "bus": return <Bus className="w-5 h-5" />;
+    case "ferry": return <Ship className="w-5 h-5" />;
+    case "drive": return <Car className="w-5 h-5" />;
+    default: return <MapPin className="w-5 h-5" />;
+  }
+}
+
+function modeLabel(mode: string): string {
+  return mode.charAt(0).toUpperCase() + mode.slice(1);
+}
+
+function RouteOptionCard({ option, isPrimary }: { option: RouteOption; isPrimary: boolean }) {
+  const price = option.priceRange;
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      className={`border p-6 space-y-4 ${isPrimary ? "border-primary/40 bg-primary/5" : "border-border bg-card"}`}
+    >
+      {/* Header */}
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <span className="text-primary">{modeIcon(option.mode)}</span>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">{modeLabel(option.mode)}</p>
+            <p className="text-base mt-0.5 leading-snug">{option.summary}</p>
+          </div>
+        </div>
+        {option.duration && (
+          <span className="font-serif text-3xl text-primary shrink-0 leading-none">{option.duration}</span>
+        )}
+      </div>
+
+      {/* Details row */}
+      {(option.frequency || option.route || option.stops) && (
+        <div className="space-y-1 text-sm text-muted-foreground">
+          {option.frequency && <p>{option.frequency}</p>}
+          {option.route && <p className="font-mono text-xs">{option.route}{option.stops ? ` · ${option.stops}` : ""}</p>}
+        </div>
+      )}
+
+      {/* Price + operators */}
+      <div className="flex flex-wrap items-center gap-4">
+        {price && (
+          <div>
+            <p className="text-xs text-muted-foreground uppercase tracking-widest mb-0.5">Estimated price</p>
+            <p className="text-amber-400 font-medium">
+              {price.currency} {price.low.toLocaleString()} – {price.high.toLocaleString()}
+            </p>
+            {price.note && <p className="text-xs text-muted-foreground/60 mt-0.5">{price.note}</p>}
+          </div>
+        )}
+        {option.operators && option.operators.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {option.operators.map((op, i) => (
+              <span key={i} className="text-xs border border-border/60 px-2 py-0.5 text-muted-foreground">{op}</span>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Tips */}
+      {option.tips && option.tips.length > 0 && (
+        <div className="space-y-1.5">
+          {option.tips.map((tip, i) => (
+            <div key={i} className="flex gap-2 text-sm text-muted-foreground">
+              <Lightbulb className="w-4 h-4 text-amber-400/70 shrink-0 mt-0.5" />
+              <span>{tip}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Booking links */}
+      {option.bookingLinks && option.bookingLinks.length > 0 && (
+        <div className="flex flex-wrap gap-2 pt-2 border-t border-border/40">
+          {option.bookingLinks.map((link, i) => (
+            <a
+              key={i}
+              href={link.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`inline-flex items-center gap-1.5 text-xs font-medium uppercase tracking-widest px-4 py-2 transition-colors ${
+                i === 0
+                  ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                  : "border border-border text-muted-foreground hover:text-foreground hover:border-foreground"
+              }`}
+            >
+              {link.label} <ExternalLink className="w-3 h-3" />
+            </a>
+          ))}
+        </div>
+      )}
+
+      {/* Disclaimer */}
+      <p className="text-xs text-muted-foreground/50 pt-1">
+        Estimated — click to check live prices
+      </p>
+    </motion.div>
+  );
+}
+
+function RouteSkeleton() {
+  return (
+    <div className="space-y-4">
+      {[1, 2].map(i => (
+        <div key={i} className="border border-border p-6 space-y-4 animate-pulse">
+          <div className="flex justify-between">
+            <div className="flex gap-3">
+              <div className="w-5 h-5 bg-muted rounded-sm" />
+              <div className="space-y-2">
+                <div className="h-3 w-16 bg-muted rounded" />
+                <div className="h-4 w-48 bg-muted rounded" />
+              </div>
+            </div>
+            <div className="h-8 w-16 bg-muted rounded" />
+          </div>
+          <div className="h-3 w-32 bg-muted rounded" />
+          <div className="h-4 w-24 bg-muted rounded" />
+          <div className="flex gap-2">
+            <div className="h-8 w-28 bg-muted rounded" />
+            <div className="h-8 w-28 bg-muted rounded" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function OriginCityInput({ value, countryValue, onChange, onCountryChange, placeholder }: {
+  value: string;
+  countryValue: string;
+  onChange: (city: string) => void;
+  onCountryChange: (country: string) => void;
+  placeholder?: string;
+}) {
+  const [query, setQuery] = useState(value);
+  const [debounced, setDebounced] = useState(value);
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setQuery(value);
+  }, [value]);
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(query), 400);
+    return () => clearTimeout(t);
+  }, [query]);
+
+  useEffect(() => {
+    const fn = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", fn);
+    return () => document.removeEventListener("mousedown", fn);
+  }, []);
+
+  const { data: suggestions, isLoading: suggestionsLoading } = useGetCityAutocomplete(
+    { q: debounced },
+    { query: { enabled: debounced.length > 1, queryKey: getGetCityAutocompleteQueryKey({ q: debounced }) } }
+  );
+
+  const handleSelect = (city: CityOption) => {
+    setQuery(`${city.city}, ${city.country}`);
+    onChange(city.city);
+    onCountryChange(city.country);
+    setOpen(false);
+  };
+
+  return (
+    <div className="relative" ref={containerRef}>
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <input
+          type="text"
+          value={query}
+          placeholder={placeholder ?? "Where are you travelling from?"}
+          onChange={e => { setQuery(e.target.value); onChange(e.target.value); setOpen(true); }}
+          onFocus={() => setOpen(true)}
+          className="w-full pl-9 pr-4 py-3 bg-background border border-border text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:border-primary transition-colors"
+        />
+      </div>
+      <AnimatePresence>
+        {open && query.length > 1 && (
+          <motion.div
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 6 }}
+            className="absolute top-full mt-1 w-full bg-card border border-border z-50 shadow-xl max-h-56 overflow-y-auto"
+          >
+            {suggestionsLoading ? (
+              <p className="p-3 text-sm text-muted-foreground text-center">Searching…</p>
+            ) : suggestions && suggestions.length > 0 ? (
+              <ul>
+                {suggestions.map((city, i) => (
+                  <li key={i}>
+                    <button
+                      type="button"
+                      onClick={() => handleSelect(city)}
+                      className="w-full text-left px-4 py-3 hover:bg-muted/50 flex items-center gap-3 transition-colors text-sm"
+                    >
+                      <MapPin className="w-3.5 h-3.5 text-primary shrink-0" />
+                      <div>
+                        <span className="font-medium">{city.city}</span>
+                        <span className="text-muted-foreground ml-1.5">{city.country}</span>
+                      </div>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="p-3 text-sm text-muted-foreground text-center">No cities found</p>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function GettingThereTab({ plan }: { plan: TravelPlan }) {
+  const { data: profile } = useGetProfile({ query: { enabled: true, queryKey: getGetProfileQueryKey() } });
+
+  const [originCity, setOriginCity] = useState<string>("");
+  const [originCountry, setOriginCountry] = useState<string>("");
+  const [hasSearched, setHasSearched] = useState(false);
+
+  useEffect(() => {
+    if (profile?.homeCity && !originCity) {
+      setOriginCity(profile.homeCity);
+      setOriginCountry(profile.homeCountry ?? "");
+    }
+  }, [profile]);
+
+  const { mutate, data: routeResult, isPending, isError } = useSearchRoutes();
+
+  const isSameCity = originCity.toLowerCase().trim() === plan.city.toLowerCase().trim();
+
+  const handleSearch = () => {
+    if (!originCity) return;
+    setHasSearched(true);
+    mutate({
+      data: {
+        originCity,
+        originCountry,
+        destinationCity: plan.city,
+        destinationCountry: plan.country,
+        startDate: plan.startDate,
+        endDate: plan.endDate,
+      },
+    });
+  };
+
+  const sortedOptions = routeResult?.options
+    ? [...routeResult.options].sort((a, b) => {
+        const ai = ROUTE_MODE_ORDER.indexOf(a.mode.toLowerCase() as typeof ROUTE_MODE_ORDER[number]);
+        const bi = ROUTE_MODE_ORDER.indexOf(b.mode.toLowerCase() as typeof ROUTE_MODE_ORDER[number]);
+        return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+      })
+    : [];
+
+  const availableOptions = sortedOptions.filter(o => o.available);
+  const onlyOneMode = availableOptions.length === 1;
+
+  return (
+    <div className="max-w-3xl space-y-8">
+      {/* Origin / Destination selector */}
+      <div className="border border-border p-6 space-y-5 bg-card">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+          <div className="flex-1 min-w-0">
+            <p className="text-xs text-muted-foreground uppercase tracking-widest mb-2">Travelling from</p>
+            <OriginCityInput
+              value={originCity ? `${originCity}${originCountry ? ", " + originCountry : ""}` : ""}
+              countryValue={originCountry}
+              onChange={setOriginCity}
+              onCountryChange={setOriginCountry}
+            />
+          </div>
+          <ArrowRight className="w-5 h-5 text-muted-foreground/40 shrink-0 mt-6 hidden sm:block" />
+          <div className="flex-1 min-w-0">
+            <p className="text-xs text-muted-foreground uppercase tracking-widest mb-2">To</p>
+            <div className="flex items-center gap-2 py-3 px-4 border border-border/40 bg-muted/20">
+              <MapPin className="w-4 h-4 text-primary shrink-0" />
+              <span className="text-sm">{plan.city}, {plan.country}</span>
+            </div>
+          </div>
+        </div>
+
+        {isSameCity && originCity && (
+          <p className="text-sm text-amber-400">You're already there!</p>
+        )}
+
+        <button
+          onClick={handleSearch}
+          disabled={!originCity || isSameCity || isPending}
+          className="bg-primary text-primary-foreground px-6 py-2.5 text-sm font-medium uppercase tracking-widest hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isPending ? "Searching…" : "Search routes"}
+        </button>
+
+        {!profile?.homeCity && (
+          <p className="text-xs text-muted-foreground/50">
+            Tip: Set your home city on your profile to auto-fill this field.
+          </p>
+        )}
+      </div>
+
+      {/* Results */}
+      {isPending && <RouteSkeleton />}
+
+      {isError && hasSearched && (
+        <div className="border border-border p-6 text-center text-muted-foreground">
+          <p className="mb-2">Something went wrong fetching routes. Please try again.</p>
+          <a href={`https://www.rome2rio.com/s/${encodeURIComponent(originCity)}/${encodeURIComponent(plan.city)}`} target="_blank" rel="noopener noreferrer" className="text-primary text-sm hover:underline flex items-center gap-1 justify-center">
+            Search on Rome2rio <ExternalLink className="w-3 h-3" />
+          </a>
+        </div>
+      )}
+
+      {!isPending && hasSearched && routeResult && (
+        <>
+          {onlyOneMode && (
+            <p className="text-sm text-muted-foreground border-l-2 border-primary/40 pl-3">
+              For this route, {availableOptions[0]?.mode ?? "flying"} is the only practical option.
+            </p>
+          )}
+
+          {availableOptions.length === 0 ? (
+            <div className="border border-border p-8 text-center space-y-3 text-muted-foreground">
+              <p>We couldn't find route options for this journey.</p>
+              <a
+                href={`https://www.rome2rio.com/s/${encodeURIComponent(originCity)}/${encodeURIComponent(plan.city)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-primary text-sm hover:underline"
+              >
+                Try all options on Rome2rio <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {availableOptions.map((opt, i) => (
+                <RouteOptionCard key={i} option={opt} isPrimary={i === 0} />
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      {!hasSearched && !isPending && (
+        <div className="text-center py-16 text-muted-foreground/40 space-y-2">
+          <Plane className="w-10 h-10 mx-auto" />
+          <p className="text-sm">Enter your departure city and search for routes</p>
+        </div>
+      )}
     </div>
   );
 }
