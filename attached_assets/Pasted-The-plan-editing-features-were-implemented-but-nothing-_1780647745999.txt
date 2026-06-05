@@ -1,0 +1,123 @@
+The plan editing features were implemented but nothing is showing
+up on the plan page. Debug and fix everything end to end.
+
+## Step 1 — Diagnose before touching anything
+
+Check each feature one by one and report exactly what is missing
+or broken before making any changes:
+
+1. Plan rename — is the pencil icon and editable name visible
+   in the plan page header?
+2. Trip notes — is the "Add trip notes..." section visible below
+   the pill nav and above the tab content?
+3. Per-destination notes — is the "Add a note" button visible
+   at the bottom of each destination card in the Itinerary tab?
+4. Day drag handles — are the six-dot drag handles visible on
+   the left of each day header in the Itinerary tab?
+5. Destination up/down arrows — are they visible on each
+   destination card?
+6. Destination remove button — is the X icon visible on each
+   destination card?
+7. Plan status badge — is it visible next to the plan name
+   in the header?
+8. Duplicate plan option — is the three-dot menu visible in
+   the plan header?
+
+For each one report: "visible and working", "visible but broken",
+or "not visible at all"
+
+## Step 2 — Common root causes to check
+
+### Components built but never placed in JSX
+This is the most common reason — the components were created
+as files but never actually imported and rendered in the plan
+page. Check the main plan page component and confirm each of
+these is actually imported and present in the JSX:
+- The rename input/heading component in the page header
+- The TripNotes component below the nav
+- The StatusBadge component next to the plan name
+- The three-dot menu in the header
+- The drag handle on each day header
+- The up/down arrows and remove button on each destination card
+- The per-destination note button at the bottom of each card
+
+If any of these are missing from the JSX, add them now.
+
+### Plan data not including new fields
+The new fields (customName, tripNotes, status, dayOrder,
+destinationOrder) may not be coming back from the backend.
+Console.log the full plan object that the frontend receives
+and check if these fields exist on it. If they are missing:
+- Check the backend GET /api/plans/:id endpoint and confirm
+  it is returning all columns including the new ones
+- Check that the Prisma migration for these new columns
+  actually ran — if not, run npx prisma migrate dev now
+
+### Database migration not run
+If the new columns don't exist in the database yet, all saves
+will fail silently. Run:
+  npx prisma migrate dev
+and confirm it completes without errors. If there are migration
+conflicts, run:
+  npx prisma migrate reset
+WARNING: migrate reset clears all data — only do this if you
+have no important saved plans in the database yet.
+
+### PATCH endpoints not wired up
+Check that these routes exist and are registered in the Express
+router:
+  PATCH /api/plans/:id/rename
+  PATCH /api/plans/:id/notes
+  PATCH /api/plans/:id/status
+  PATCH /api/plans/:id/reorder-days
+  PATCH /api/plans/:id/reorder-destinations
+  PATCH /api/plans/:id/remove-destination
+  POST  /api/plans/:id/duplicate
+If any are missing, create them now.
+
+### dnd-kit not installed
+The day drag and drop requires @dnd-kit/core and @dnd-kit/sortable.
+Check package.json — if these are missing run:
+  npm install @dnd-kit/core @dnd-kit/sortable @dnd-kit/utilities
+in the client directory.
+
+## Step 3 — Fix each missing feature
+
+After identifying what is missing, fix them in this order:
+
+1. First fix the database — run migrations, confirm new columns exist
+2. Fix the backend — confirm all PATCH endpoints exist and return
+   the updated plan
+3. Fix the frontend — import and place any components that were
+   built but not rendered. If a component was never built at all,
+   build it now.
+
+## Step 4 — Verify each feature works end to end
+
+After fixes, confirm each of these works without console errors:
+
+- Click the plan name → becomes editable → type new name →
+  press Enter → name updates and persists on page refresh
+- Click "Add trip notes..." → expands → type something → wait
+  1.5 seconds → "Saved" indicator appears → refresh page →
+  note is still there
+- Click status badge → dropdown appears → select "Booked" →
+  badge updates → refresh → status persists
+- Drag a day header to reorder → day moves → day numbers
+  update → refresh → new order persists
+- Click up/down arrows on a destination → order changes →
+  refresh → order persists
+- Click X on a destination → confirmation appears → confirm →
+  card animates out
+- Click three-dot menu → "Duplicate plan" option appears →
+  click it → navigates to new duplicate plan
+- "Add a note" button visible on destination cards → clicking
+  opens inline textarea → type → auto-saves
+
+## Step 5 — Profile page filter bar
+
+Also confirm the status filter bar on the profile page is
+visible above the saved plans filmstrip. It should show:
+All | Planning | Booked | Ongoing | Completed | Wishlist
+as filter pills. If it is missing, add it now — it filters
+the filmstrip to only show plans matching the selected status.

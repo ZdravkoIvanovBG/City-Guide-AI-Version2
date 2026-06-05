@@ -404,6 +404,7 @@ function formatPlan(plan: typeof plansTable.$inferSelect) {
   const data = plan.planData as Record<string, unknown>;
   return {
     id: plan.id,
+    userId: plan.userId,
     shareCode: plan.shareCode,
     city: plan.city,
     country: plan.country,
