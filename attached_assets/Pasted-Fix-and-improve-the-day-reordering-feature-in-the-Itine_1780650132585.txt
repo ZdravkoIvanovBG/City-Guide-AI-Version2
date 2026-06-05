@@ -1,0 +1,90 @@
+Fix and improve the day reordering feature in the Itinerary tab.
+Two specific changes needed:
+
+---
+
+## Change 1 — Dates swap with the days when reordering
+
+Currently when a day is dragged to a new position the day numbers
+update but the dates stay fixed to their original calendar dates.
+This is wrong — if Day 1 (Monday June 3) and Day 2 (Tuesday June 4)
+are swapped, the result should be:
+
+  Day 1 — Tuesday June 4  (previously Day 2)
+  Day 2 — Monday June 3   (previously Day 1)
+
+The date belongs to the day's position in the itinerary, not to
+its original slot. The user is reorganising which day they visit
+which destinations — the calendar date follows the position.
+
+Fix the reorder logic so that when days are dragged the dates
+reorder along with the destinations. The day number always
+reflects position (Day 1 = first in list, Day 2 = second, etc.)
+and the date is reassigned sequentially from the trip start date
+based on the new order:
+
+  position 0 → startDate
+  position 1 → startDate + 1 day
+  position 2 → startDate + 2 days
+  etc.
+
+Recalculate and re-render dates immediately on drop, before the
+save request completes (optimistic update).
+
+---
+
+## Change 2 — Collapsed day view for easier drag reordering
+
+When the user wants to reorder days, having all destination cards
+expanded makes it hard to drag — there is too much content between
+handles.
+
+Add a "Reorder days" toggle button above the first day header in
+the Itinerary tab. It should look like a small button with a
+drag icon and the label "Reorder days".
+
+### When the toggle is OFF (default state)
+- Days look exactly as they do now — fully expanded with all
+  destination cards visible
+- Drag handles are visible but subtle (low opacity, full opacity
+  on hover)
+
+### When the toggle is ON (reorder mode)
+- All destination cards collapse and hide with a smooth Framer
+  Motion height animation — only the day header row is visible
+- Each day header becomes a compact draggable pill showing:
+  [ ⠿ ] Day 1 — Monday June 3 · 3 destinations
+  The six-dot drag handle on the left, day number + date in
+  the middle, destination count on the right as a muted badge
+- The drag handle is larger and more prominent in this mode
+  making it easy to grab
+- A subtle amber glow on the active dragging item
+- Days are now just a short list of compact pills — very easy
+  to drag into any order
+- A small instructional label appears below the toggle button:
+  "Drag days into your preferred order — destinations are
+  temporarily hidden"
+- The toggle button label changes to "Done reordering" with
+  a checkmark icon
+
+### When the user clicks "Done reordering"
+- Toggle goes back OFF
+- All destination cards expand back with a smooth staggered
+  Framer Motion animation (each day's cards animate in with
+  a 60ms offset between days so it feels like they unfold
+  sequentially rather than all popping in at once)
+- The final reordered state is saved to the database
+
+### Auto-exit reorder mode
+If the user clicks on any tab other than Itinerary while in
+reorder mode, automatically exit reorder mode first (collapse
+the toggle) before switching tabs. This prevents the collapsed
+state persisting when returning to the Itinerary tab from
+another tab unexpectedly.
+
+### Save behavior in reorder mode
+Save the new day order to the database only when the user
+clicks "Done reordering" — not on every individual drag drop.
+This avoids multiple rapid PATCH requests while the user is
+still arranging. Show a brief "Order saved" toast when the
+save completes after clicking Done.

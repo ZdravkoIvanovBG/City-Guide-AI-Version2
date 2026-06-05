@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useRoute } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { format } from "date-fns";
+import { format, addDays } from "date-fns";
 import { 
   useGetPlan, 
   getGetPlanQueryKey,
@@ -332,7 +332,8 @@ export default function PlanView() {
 
   // Local day order (for optimistic DnD)
   const [localDayOrder, setLocalDayOrder] = useState<number[] | null>(null);
-  useEffect(() => { setLocalDayOrder(null); }, [plan?.id]);
+  const [reorderMode, setReorderMode] = useState(false);
+  useEffect(() => { setLocalDayOrder(null); setReorderMode(false); }, [plan?.id]);
 
   // Mutations
   const { mutate: renamePlan } = useRenamePlan();
@@ -378,13 +379,19 @@ export default function PlanView() {
   // DnD sensors
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
-  // Ordered days (apply localDayOrder if set, else plan.dayOrder, else original)
+  // Ordered days — apply order, then reassign dates sequentially from startDate
   const orderedDays = (() => {
     if (!plan) return [];
     const days = plan.days as PlanDay[];
     const order = localDayOrder ?? (plan.dayOrder as number[] | null);
-    if (!order || order.length !== days.length) return days;
-    return order.map(i => days[i]).filter(Boolean);
+    const reordered = (!order || order.length !== days.length)
+      ? days
+      : (order.map(i => days[i]).filter(Boolean) as PlanDay[]);
+    return reordered.map((day, idx) => ({
+      ...day,
+      dayNumber: idx + 1,
+      date: format(addDays(new Date(plan.startDate), idx), "yyyy-MM-dd"),
+    }));
   })();
 
   const handleDayDragEnd = (event: DragEndEvent) => {
@@ -397,9 +404,22 @@ export default function PlanView() {
     if (oldIdx === -1 || newIdx === -1) return;
     const newOrder = arrayMove(currentOrder, oldIdx, newIdx);
     setLocalDayOrder(newOrder);
-    reorderDaysMut({ id, data: { dayOrder: newOrder } }, {
-      onSuccess: invalidatePlan,
-      onError: () => { setLocalDayOrder(null); toast({ title: "Reorder failed", variant: "destructive" }); },
+    // In reorder mode: accumulate changes, save only on Done
+    if (!reorderMode) {
+      reorderDaysMut({ id, data: { dayOrder: newOrder } }, {
+        onSuccess: invalidatePlan,
+        onError: () => { setLocalDayOrder(null); toast({ title: "Reorder failed", variant: "destructive" }); },
+      });
+    }
+  };
+
+  const exitReorderMode = () => {
+    setReorderMode(false);
+    const days = plan?.days as PlanDay[] | undefined;
+    const finalOrder = localDayOrder ?? (plan?.dayOrder as number[] | null) ?? (days ?? []).map((_, i) => i);
+    reorderDaysMut({ id, data: { dayOrder: finalOrder } }, {
+      onSuccess: () => { invalidatePlan(); toast({ title: "Order saved" }); },
+      onError: () => toast({ title: "Save failed", variant: "destructive" }),
     });
   };
 
@@ -596,7 +616,7 @@ export default function PlanView() {
 
       {/* Content */}
       <main className="flex-1 relative z-10 container mx-auto px-6 py-12">
-        <Tabs defaultValue="getting-there" className="w-full">
+        <Tabs defaultValue="getting-there" className="w-full" onValueChange={(val) => { if (val !== "itinerary" && reorderMode) exitReorderMode(); }}>
           <div className="sticky top-20 z-40 bg-background/90 backdrop-blur-md pt-4 pb-4 border-b border-border/50 mb-12">
             <TabsList className="bg-transparent h-auto p-0 flex gap-8 border-none justify-start overflow-x-auto">
               {["getting-there", "itinerary", "hotels", "restaurants", "misc", "before-you-go"].map((tab) => (
@@ -616,41 +636,70 @@ export default function PlanView() {
           </TabsContent>
 
           <TabsContent value="itinerary" className="mt-0 outline-none">
+            {isOwner && (
+              <div className="mb-8">
+                <button
+                  onClick={() => reorderMode ? exitReorderMode() : setReorderMode(true)}
+                  className={`flex items-center gap-2 text-xs font-medium uppercase tracking-widest px-3 py-2 border transition-all ${reorderMode ? "border-primary text-primary bg-primary/10" : "border-border/60 text-muted-foreground hover:text-foreground hover:border-border"}`}
+                >
+                  {reorderMode ? <Check className="w-3.5 h-3.5" /> : <GripVertical className="w-3.5 h-3.5" />}
+                  {reorderMode ? "Done reordering" : "Reorder days"}
+                </button>
+                {reorderMode && (
+                  <motion.p
+                    initial={{ opacity: 0, y: -4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mt-2 text-xs text-muted-foreground/50"
+                  >
+                    Drag days into your preferred order — destinations are temporarily hidden
+                  </motion.p>
+                )}
+              </div>
+            )}
             {isOwner ? (
               <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDayDragEnd}>
-                <SortableContext items={(orderedDays as PlanDay[]).map((_, i) => {
-                  const days = plan.days as PlanDay[];
-                  const order = localDayOrder ?? (plan.dayOrder as number[] | null);
-                  if (order && order.length === days.length) return order[i];
-                  return i;
-                })} strategy={verticalListSortingStrategy}>
-                  <div className="space-y-24">
+                <SortableContext
+                  items={(orderedDays as PlanDay[]).map((_, i) => {
+                    const days = plan.days as PlanDay[];
+                    const order = localDayOrder ?? (plan.dayOrder as number[] | null);
+                    return order && order.length === days.length ? order[i] : i;
+                  })}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <motion.div
+                    layout
+                    className={reorderMode ? "space-y-2" : "space-y-24"}
+                    transition={{ duration: 0.3, ease: "easeInOut" }}
+                  >
                     {(orderedDays as PlanDay[]).map((day, idx) => {
                       const days = plan.days as PlanDay[];
                       const order = localDayOrder ?? (plan.dayOrder as number[] | null);
                       const originalIdx = order && order.length === days.length ? order[idx] : idx;
                       return (
-                        <SortableDay key={originalIdx} dayOriginalIndex={originalIdx}>
-                          <DaySection
-                            day={day}
-                            dayOriginalIndex={originalIdx}
-                            weatherByDate={weatherByDate}
-                            isOwner={isOwner}
-                            planId={id}
-                            destNoteMap={destNoteMap}
-                            onReorderDests={(destOrder) => reorderDestsMut({ id, data: { dayIndex: originalIdx, destOrder } }, { onSuccess: invalidatePlan })}
-                            onRemoveDest={(destIndex) => removeDestMut({ id, data: { dayIndex: originalIdx, destIndex } }, { onSuccess: invalidatePlan })}
-                          />
+                        <SortableDay key={originalIdx} dayOriginalIndex={originalIdx} reorderMode={reorderMode} day={day}>
+                          {!reorderMode && (
+                            <DaySection
+                              day={day}
+                              dayOriginalIndex={originalIdx}
+                              weatherByDate={weatherByDate}
+                              isOwner={isOwner}
+                              planId={id}
+                              destNoteMap={destNoteMap}
+                              revealDelay={idx * 0.06}
+                              onReorderDests={(destOrder) => reorderDestsMut({ id, data: { dayIndex: originalIdx, destOrder } }, { onSuccess: invalidatePlan })}
+                              onRemoveDest={(destIndex) => removeDestMut({ id, data: { dayIndex: originalIdx, destIndex } }, { onSuccess: invalidatePlan })}
+                            />
+                          )}
                         </SortableDay>
                       );
                     })}
-                  </div>
+                  </motion.div>
                 </SortableContext>
               </DndContext>
             ) : (
               <div className="space-y-24">
                 {(plan.days as PlanDay[]).map((day, idx) => (
-                  <DaySection key={idx} day={day} dayOriginalIndex={idx} weatherByDate={weatherByDate} isOwner={false} planId={id} destNoteMap={destNoteMap} onReorderDests={() => {}} onRemoveDest={() => {}} />
+                  <DaySection key={idx} day={day} dayOriginalIndex={idx} weatherByDate={weatherByDate} isOwner={false} planId={id} destNoteMap={destNoteMap} revealDelay={0} onReorderDests={() => {}} onRemoveDest={() => {}} />
                 ))}
               </div>
             )}
@@ -1599,8 +1648,38 @@ function BeforeYouGoTab({ plan }: { plan: TravelPlan }) {
 
 // ── Sortable day wrapper ──────────────────────────────────────────────────────
 
-function SortableDay({ dayOriginalIndex, children }: { dayOriginalIndex: number; children: React.ReactNode }) {
+function SortableDay({ dayOriginalIndex, reorderMode, day, children }: {
+  dayOriginalIndex: number;
+  reorderMode?: boolean;
+  day?: PlanDay;
+  children: React.ReactNode;
+}) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: dayOriginalIndex });
+
+  if (reorderMode && day) {
+    return (
+      <div
+        ref={setNodeRef}
+        style={{ transform: CSS.Transform.toString(transform), transition }}
+        {...attributes}
+        {...listeners}
+        className={`flex items-center gap-3 px-4 py-3.5 border cursor-grab active:cursor-grabbing select-none transition-all ${
+          isDragging
+            ? "border-amber-400/60 bg-amber-950/30 shadow-lg shadow-amber-400/10 z-50 relative opacity-90"
+            : "border-border bg-card hover:border-primary/40 hover:bg-card/80"
+        }`}
+      >
+        <GripVertical className="w-5 h-5 text-muted-foreground/50 shrink-0" />
+        <span className="font-serif text-lg text-primary shrink-0">Day {day.dayNumber}</span>
+        <span className="text-muted-foreground/40 text-sm">—</span>
+        <span className="text-sm text-foreground/70 truncate">{format(new Date(day.date), "EEEE, MMMM d")}</span>
+        <span className="ml-auto text-xs text-muted-foreground/40 shrink-0 pl-4">
+          {day.destinations.length} {day.destinations.length === 1 ? "stop" : "stops"}
+        </span>
+      </div>
+    );
+  }
+
   return (
     <div
       ref={setNodeRef}
@@ -1629,11 +1708,12 @@ interface DaySectionProps {
   isOwner: boolean;
   planId: number;
   destNoteMap: Map<string, string>;
+  revealDelay?: number;
   onReorderDests: (destOrder: number[]) => void;
   onRemoveDest: (destIndex: number) => void;
 }
 
-function DaySection({ day, dayOriginalIndex, weatherByDate, isOwner, planId, destNoteMap, onReorderDests, onRemoveDest }: DaySectionProps) {
+function DaySection({ day, dayOriginalIndex, weatherByDate, isOwner, planId, destNoteMap, revealDelay = 0, onReorderDests, onRemoveDest }: DaySectionProps) {
   const handleMoveUp = (i: number) => {
     if (i === 0) return;
     const order = day.destinations.map((_, idx) => idx);
@@ -1659,7 +1739,12 @@ function DaySection({ day, dayOriginalIndex, weatherByDate, isOwner, planId, des
         </p>
         <WeatherStrip day={day} weatherByDate={weatherByDate} />
       </div>
-      <div className="space-y-8 relative z-10 pl-2 md:pl-8 border-l border-border/50">
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: revealDelay, duration: 0.3 }}
+        className="space-y-8 relative z-10 pl-2 md:pl-8 border-l border-border/50"
+      >
         {day.destinations.map((dest, i) => (
           <DestinationCard
             key={i}
@@ -1676,7 +1761,7 @@ function DaySection({ day, dayOriginalIndex, weatherByDate, isOwner, planId, des
             onRemove={() => onRemoveDest(i)}
           />
         ))}
-      </div>
+      </motion.div>
     </div>
   );
 }
