@@ -1090,6 +1090,9 @@ components:
           type: string
         category:
           type: string
+        timeOfDay:
+          type: string
+          enum: [morning, midday, evening]
         summary:
           type: string
         insiderTips:

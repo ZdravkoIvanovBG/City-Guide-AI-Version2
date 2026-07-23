@@ -70,6 +70,7 @@ interface PlanData {
     destinations: Array<{
       name: string;
       category: string;
+      timeOfDay: "morning" | "midday" | "evening";
       summary: string;
       insiderTips: string[];
       entryCost: string;
@@ -283,6 +284,24 @@ Trip details:
 - Traveller type: ${travellerType}
 - Interests: ${preferences ?? "General sightseeing and local culture"}
 
+CRITICAL — Day structure rules you MUST follow exactly:
+
+DAY 1 (Arrival day):
+- Maximum 2 destinations, both tagged "evening"
+- Choose gentle, walkable, low-effort stops perfect for a first evening after travel: a neighbourhood stroll, a welcome dinner area, a scenic viewpoint at dusk, a lively square or promenade
+- Do NOT include entry-fee attractions, museums, or anything that requires planning or transport on day 1
+- The tone should be: settle in, get a feel for the city, eat well
+
+DAYS 2 and beyond (Full days):
+- Exactly 3 destinations per day, in this FIXED order: morning → midday → evening
+- Morning stop: something best experienced early — a market, a popular landmark before crowds arrive, a park or scenic spot in good morning light. Avoid anything that opens late.
+- Midday stop: a walkable neighbourhood to explore, an indoor attraction (museum, gallery, etc.), or a lunch district. Something that works well in the heat of the day or after a morning out.
+- Evening stop: a sunset viewpoint, a restaurant/food street, a bar area, a cultural evening venue (theatre district, live music area). Something that comes alive after dark or at golden hour.
+
+Each destination MUST have a "timeOfDay" field set to exactly "morning", "midday", or "evening" matching its slot.
+The bestTimeToVisit text must be consistent with the assigned timeOfDay (e.g. morning → "Best visited before 10am", evening → "Most atmospheric after sunset").
+Never put a museum as the evening stop. Never put a sunset viewpoint as the morning stop.
+
 Return ONLY valid JSON (no markdown, no preamble, no code blocks) matching this exact structure:
 
 {
@@ -298,6 +317,7 @@ Return ONLY valid JSON (no markdown, no preamble, no code blocks) matching this 
         {
           "name": "string",
           "category": "Museum|Market|Park|Landmark|Neighbourhood|Beach|Temple|Gallery|Restaurant District|Viewpoint",
+          "timeOfDay": "morning|midday|evening",
           "summary": "2-3 engaging sentences about this place",
           "insiderTips": ["tip1", "tip2", "tip3"],
           "entryCost": "Free OR €12 adults OR Pay-what-you-wish",
@@ -309,7 +329,7 @@ Return ONLY valid JSON (no markdown, no preamble, no code blocks) matching this 
             "taxi": { "available": true, "duration": "7 min", "cost": "approx. [local cost]", "instructions": "Available via Uber, Bolt, or local taxis." },
             "bicycle": { "available": false }
           },
-          "bestTimeToVisit": "string",
+          "bestTimeToVisit": "string — consistent with timeOfDay",
           "photoSearchQuery": "clean search string like 'Eiffel Tower Paris'"
         }
       ]
@@ -391,7 +411,8 @@ Return ONLY valid JSON (no markdown, no preamble, no code blocks) matching this 
 }
 
 Rules:
-- Include 3-4 destinations per day
+- Day 1: exactly 2 destinations, both timeOfDay "evening" (arrival day — see structure rules above)
+- Days 2+: exactly 3 destinations per day in morning → midday → evening order (see structure rules above)
 - Include 2-3 hotels per tier (budget/midRange/luxury)
 - Include 8-10 restaurants
 - Include 5-8 misc events/experiences
