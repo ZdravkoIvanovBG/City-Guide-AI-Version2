@@ -139,15 +139,6 @@ export interface PlanSummary {
   status?: string | null;
 }
 
-export type DestinationTimeOfDay = typeof DestinationTimeOfDay[keyof typeof DestinationTimeOfDay];
-
-
-export const DestinationTimeOfDay = {
-  morning: 'morning',
-  midday: 'midday',
-  evening: 'evening',
-} as const;
-
 export interface TransportMode {
   available: boolean;
   duration?: string;
@@ -163,7 +154,6 @@ export type DestinationHowToGetThere = {[key: string]: TransportMode};
 export interface Destination {
   name: string;
   category: string;
-  timeOfDay?: DestinationTimeOfDay;
   summary: string;
   insiderTips: string[];
   entryCost: string;

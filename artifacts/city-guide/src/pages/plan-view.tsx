@@ -62,7 +62,7 @@ import {
   ChevronDown, Package, Wallet, ClipboardList,
   Plane, Ship, Lightbulb, ArrowRight, Search,
   Edit2, Check, X, GripVertical, Trash2, ChevronUp, ChevronDown as ChevronDownIcon,
-  StickyNote, Tag, Sunrise, Sun, Moon,
+  StickyNote, Tag,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -1848,28 +1848,9 @@ function DestinationCard({ dest, destIndex, dayIndex, planId, isOwner, savedNote
         )}
 
         <div className="p-8 flex-1 flex flex-col gap-5">
-          {/* Title + cost + time-of-day */}
+          {/* Title + cost */}
           <div className="flex items-start justify-between gap-4">
-            <div className="flex flex-col gap-2 min-w-0">
-              {dest.timeOfDay && (() => {
-                const tod = dest.timeOfDay as string;
-                const configs: Record<string, { label: string; Icon: typeof Sunrise; cls: string }> = {
-                  morning: { label: "Morning", Icon: Sunrise, cls: "text-amber-300 border-amber-300/30 bg-amber-950/30" },
-                  midday:  { label: "Midday",  Icon: Sun,     cls: "text-yellow-300 border-yellow-300/30 bg-yellow-950/30" },
-                  evening: { label: "Evening", Icon: Moon,    cls: "text-indigo-300 border-indigo-300/30 bg-indigo-950/30" },
-                };
-                const cfg = configs[tod];
-                if (!cfg) return null;
-                const { label, Icon, cls } = cfg;
-                return (
-                  <span className={`inline-flex items-center gap-1 text-[10px] font-medium uppercase tracking-widest px-2 py-0.5 border w-fit ${cls}`}>
-                    <Icon className="w-3 h-3" />
-                    {label}
-                  </span>
-                );
-              })()}
-              <h4 className="font-serif text-3xl text-foreground">{dest.name}</h4>
-            </div>
+            <h4 className="font-serif text-3xl text-foreground">{dest.name}</h4>
             <span className={`text-xs font-medium px-2 py-1 whitespace-nowrap shrink-0 ${dest.entryCost.toLowerCase().includes("free") ? "text-secondary border border-secondary/30 bg-secondary/10" : "text-primary border border-primary/30 bg-primary/10"}`}>
               {dest.entryCost}
             </span>

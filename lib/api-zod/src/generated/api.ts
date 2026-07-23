@@ -153,7 +153,6 @@ export const GetPlanResponse = zod.object({
   "destinations": zod.array(zod.object({
   "name": zod.string(),
   "category": zod.string(),
-  "timeOfDay": zod.enum(['morning', 'midday', 'evening']).optional(),
   "summary": zod.string(),
   "insiderTips": zod.array(zod.string()),
   "entryCost": zod.string(),
@@ -319,7 +318,6 @@ export const RenamePlanResponse = zod.object({
   "destinations": zod.array(zod.object({
   "name": zod.string(),
   "category": zod.string(),
-  "timeOfDay": zod.enum(['morning', 'midday', 'evening']).optional(),
   "summary": zod.string(),
   "insiderTips": zod.array(zod.string()),
   "entryCost": zod.string(),
@@ -477,7 +475,6 @@ export const UpdatePlanNotesResponse = zod.object({
   "destinations": zod.array(zod.object({
   "name": zod.string(),
   "category": zod.string(),
-  "timeOfDay": zod.enum(['morning', 'midday', 'evening']).optional(),
   "summary": zod.string(),
   "insiderTips": zod.array(zod.string()),
   "entryCost": zod.string(),
@@ -635,7 +632,6 @@ export const UpdatePlanStatusResponse = zod.object({
   "destinations": zod.array(zod.object({
   "name": zod.string(),
   "category": zod.string(),
-  "timeOfDay": zod.enum(['morning', 'midday', 'evening']).optional(),
   "summary": zod.string(),
   "insiderTips": zod.array(zod.string()),
   "entryCost": zod.string(),
@@ -793,7 +789,6 @@ export const ReorderDaysResponse = zod.object({
   "destinations": zod.array(zod.object({
   "name": zod.string(),
   "category": zod.string(),
-  "timeOfDay": zod.enum(['morning', 'midday', 'evening']).optional(),
   "summary": zod.string(),
   "insiderTips": zod.array(zod.string()),
   "entryCost": zod.string(),
@@ -952,7 +947,6 @@ export const ReorderDestinationsResponse = zod.object({
   "destinations": zod.array(zod.object({
   "name": zod.string(),
   "category": zod.string(),
-  "timeOfDay": zod.enum(['morning', 'midday', 'evening']).optional(),
   "summary": zod.string(),
   "insiderTips": zod.array(zod.string()),
   "entryCost": zod.string(),
@@ -1111,7 +1105,6 @@ export const RemoveDestinationResponse = zod.object({
   "destinations": zod.array(zod.object({
   "name": zod.string(),
   "category": zod.string(),
-  "timeOfDay": zod.enum(['morning', 'midday', 'evening']).optional(),
   "summary": zod.string(),
   "insiderTips": zod.array(zod.string()),
   "entryCost": zod.string(),
@@ -1322,7 +1315,6 @@ export const RegeneratePlanResponse = zod.object({
   "destinations": zod.array(zod.object({
   "name": zod.string(),
   "category": zod.string(),
-  "timeOfDay": zod.enum(['morning', 'midday', 'evening']).optional(),
   "summary": zod.string(),
   "insiderTips": zod.array(zod.string()),
   "entryCost": zod.string(),
@@ -1476,7 +1468,6 @@ export const GetPublicPlanResponse = zod.object({
   "destinations": zod.array(zod.object({
   "name": zod.string(),
   "category": zod.string(),
-  "timeOfDay": zod.enum(['morning', 'midday', 'evening']).optional(),
   "summary": zod.string(),
   "insiderTips": zod.array(zod.string()),
   "entryCost": zod.string(),
